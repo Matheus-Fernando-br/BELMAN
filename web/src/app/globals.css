@@ -271,6 +271,7 @@ main:focus {
   font-size: var(--t-small);
   font-weight: 600;
   letter-spacing: -0.005em;
+  text-align: center;
   text-decoration: none;
   cursor: pointer;
   overflow: hidden;

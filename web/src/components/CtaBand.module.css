@@ -52,7 +52,7 @@
   animation: spin-slow 40s linear infinite;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 999px) {
   .mark {
     top: auto;
     bottom: 1.5rem;

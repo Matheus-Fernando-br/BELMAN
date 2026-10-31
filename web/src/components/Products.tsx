@@ -130,7 +130,7 @@ export function Products() {
             </ul>
             <div className={styles.actions}>
               <InterestLink type="obra-facil" className="button button-light">
-                Quero conhecer o Obra Fácil <span className="arrow" aria-hidden="true">→</span>
+                Conhecer o Obra Fácil <span className="arrow" aria-hidden="true">→</span>
               </InterestLink>
             </div>
           </div>

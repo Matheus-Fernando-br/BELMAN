@@ -98,7 +98,27 @@
 }
 
 .mark {
-  width: min(100%, 560px);
+  width: min(100%, 440px);
+}
+
+@media (max-width: 599px) {
+  .eyebrow::after {
+    display: none;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions > a {
+    flex: 1 1 100%;
+  }
+}
+
+@media (min-width: 960px) {
+  .mark {
+    width: min(100%, 560px);
+  }
 }
 
 .caption {

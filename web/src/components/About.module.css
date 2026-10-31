@@ -56,6 +56,24 @@
   font-size: var(--t-small);
 }
 
+@media (min-width: 600px) {
+  .stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 0;
+  }
+
+  .stat {
+    padding: var(--s-5) var(--s-5);
+    border-bottom: 0;
+    border-left: 1px solid var(--line-strong);
+  }
+
+  .stat:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+
 @media (min-width: 900px) {
   .layout {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);

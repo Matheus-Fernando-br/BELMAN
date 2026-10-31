@@ -69,7 +69,7 @@
   text-underline-offset: 4px;
 }
 
-.social {
+.column .social {
   --social-fg: var(--on-ink-muted);
   --social-fg-hover: var(--ink);
   --social-line: var(--on-ink-line);
@@ -124,7 +124,18 @@
   text-decoration: underline;
 }
 
-@media (min-width: 760px) {
+@media (min-width: 420px) and (max-width: 999px) {
+  .top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .brand,
+  .top > .column:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1000px) {
   .top {
     grid-template-columns: 1.6fr 1fr 1fr 1.3fr;
   }
