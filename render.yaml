@@ -1,0 +1,26 @@
+# Render Blueprint for the Bellman API (documents the production configuration).
+services:
+  - type: web
+    name: bellman-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: api
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: CONTACT_RELAY_URL
+        sync: false

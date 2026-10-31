@@ -1,0 +1,16 @@
+# Dependencies and builds
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Environment files with real values (only .env.example is committed)
+.env
+.env.*
+!.env.example
+
+# Tooling
+.vercel/
+.DS_Store
+*.log

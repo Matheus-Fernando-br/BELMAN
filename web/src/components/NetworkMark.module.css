@@ -1,0 +1,147 @@
+.wrap {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --shift-x: 0px;
+  --shift-y: 0px;
+  --mark-color: var(--ink);
+  --mark-bg: var(--paper);
+  perspective: 900px;
+  color: var(--mark-color);
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translate3d(var(--shift-x), var(--shift-y), 0);
+  transition: transform 1.2s var(--ease-out);
+  animation: float 9s var(--ease-in-out) 3s infinite;
+}
+
+/* Connections draw themselves after the nodes appear. */
+.edges line {
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 900ms var(--ease-out) forwards;
+  animation-delay: calc(var(--intro, 0s) + 900ms + var(--i) * 110ms);
+}
+
+.edges line:first-child {
+  stroke-width: 3;
+}
+
+.ghost line {
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: 0.18;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 1400ms var(--ease-out) forwards;
+  animation-delay: calc(var(--intro, 0s) + 2200ms + var(--i) * 160ms);
+}
+
+.node {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  transform: scale(0.2);
+  animation: pop 640ms var(--ease-out) forwards;
+  animation-delay: calc(var(--intro, 0s) + var(--i) * 120ms);
+}
+
+.filled {
+  fill: currentColor;
+}
+
+.hollow {
+  fill: var(--mark-bg);
+  stroke: currentColor;
+  stroke-width: 2.2;
+}
+
+.halo {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: halo 4.8s var(--ease-out) infinite;
+  animation-delay: calc(var(--intro, 0s) + 3s + var(--i) * 0.9s);
+}
+
+.pulses circle {
+  fill: currentColor;
+  opacity: 0;
+  animation: fade-in 600ms ease forwards;
+  animation-delay: calc(var(--intro, 0s) + 2.6s + var(--i) * 0.5s);
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes halo {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.6);
+  }
+  40%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@keyframes fade-in {
+  to {
+    opacity: 0.85;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edges line,
+  .ghost line {
+    stroke-dashoffset: 0;
+  }
+
+  .node {
+    opacity: 1;
+    transform: none;
+  }
+
+  .pulses,
+  .halo {
+    display: none;
+  }
+}

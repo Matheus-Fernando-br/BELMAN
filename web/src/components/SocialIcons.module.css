@@ -1,0 +1,37 @@
+.list {
+  --social-fg: var(--muted);
+  --social-fg-hover: var(--white);
+  --social-line: var(--line-strong);
+  --social-bg-hover: var(--ink);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.link {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--social-line);
+  border-radius: 50%;
+  color: var(--social-fg);
+  transition:
+    color var(--d-fast) var(--ease-out),
+    border-color var(--d-fast) var(--ease-out),
+    background-color var(--d-fast) var(--ease-out),
+    transform var(--d-base) var(--ease-out);
+}
+
+.link:hover {
+  color: var(--social-fg-hover);
+  border-color: var(--social-bg-hover);
+  background: var(--social-bg-hover);
+  transform: translateY(-3px);
+}
+
+.icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}

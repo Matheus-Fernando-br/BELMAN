@@ -1,0 +1,71 @@
+.splash {
+  --intro: 0s;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  animation: lift 900ms var(--ease-in-out) 2.7s forwards;
+  pointer-events: none;
+}
+
+:global(html[data-intro="seen"]) .splash {
+  display: none;
+}
+
+.lockup {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2rem);
+  width: min(86vw, 620px);
+  animation: settle 2.4s var(--ease-out) both;
+}
+
+.mark {
+  flex: 0 0 38%;
+}
+
+.mark :global(svg) {
+  animation: none;
+}
+
+.wordmark {
+  flex: 1 1 auto;
+  height: auto;
+  color: var(--ink);
+  opacity: 0;
+  filter: blur(14px);
+  transform: translateX(-12px);
+  animation: focus 900ms var(--ease-out) 1.2s forwards;
+}
+
+@keyframes focus {
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
+@keyframes settle {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes lift {
+  to {
+    clip-path: inset(0 0 100% 0);
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash {
+    display: none;
+  }
+}

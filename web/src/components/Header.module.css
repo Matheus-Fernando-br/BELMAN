@@ -1,0 +1,221 @@
+.header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: var(--header-h);
+  transition:
+    background-color var(--d-base) var(--ease-out),
+    box-shadow var(--d-base) var(--ease-out),
+    backdrop-filter var(--d-base) var(--ease-out);
+}
+
+.header[data-scrolled="true"] {
+  background: rgb(245 245 245 / 0.78);
+  backdrop-filter: saturate(160%) blur(16px);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.06);
+}
+
+.bar {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-5);
+}
+
+.brand {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.mark {
+  --mark-hollow: var(--paper);
+  width: 2.6rem;
+  height: auto;
+  transition: transform var(--d-slow) var(--ease-out);
+}
+
+.brand:hover .mark {
+  transform: rotate(-8deg) scale(1.06);
+}
+
+.wordmark {
+  width: 6.4rem;
+  height: auto;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s-6);
+}
+
+.links {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.links a {
+  position: relative;
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  color: var(--muted);
+  font-size: var(--t-small);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--d-fast) var(--ease-out);
+}
+
+.links a::after {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.1rem;
+  height: 1.5px;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--d-base) var(--ease-out);
+}
+
+.links a:hover,
+.links a[aria-current="true"] {
+  color: var(--ink);
+}
+
+.links a:hover::after,
+.links a[aria-current="true"]::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.cta {
+  min-height: 2.6rem;
+  padding: 0.5rem 1.1rem;
+}
+
+.toggle {
+  display: none;
+  position: relative;
+  z-index: 2;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bars,
+.bars::before,
+.bars::after {
+  position: absolute;
+  left: 50%;
+  width: 1.1rem;
+  height: 1.5px;
+  background: var(--ink);
+  transition: transform var(--d-base) var(--ease-out), opacity var(--d-fast);
+}
+
+.bars {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.bars::before,
+.bars::after {
+  content: "";
+  left: 0;
+}
+
+.bars::before {
+  transform: translateY(-5px);
+}
+
+.bars::after {
+  transform: translateY(5px);
+}
+
+.header[data-open="true"] .bars {
+  background: transparent;
+}
+
+.header[data-open="true"] .bars::before {
+  transform: rotate(45deg);
+}
+
+.header[data-open="true"] .bars::after {
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 900px) {
+  .toggle {
+    display: block;
+  }
+
+  .nav {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--s-7);
+    padding: var(--header-h) var(--gutter) var(--s-7);
+    background: var(--paper);
+    clip-path: circle(0% at calc(100% - 2.6rem) 2.2rem);
+    visibility: hidden;
+    transition:
+      clip-path 700ms var(--ease-in-out),
+      visibility 0s linear 700ms;
+  }
+
+  .header[data-open="true"] .nav {
+    clip-path: circle(150% at calc(100% - 2.6rem) 2.2rem);
+    visibility: visible;
+    transition:
+      clip-path 700ms var(--ease-in-out),
+      visibility 0s;
+  }
+
+  .links {
+    flex-direction: column;
+    gap: var(--s-2);
+  }
+
+  .links a {
+    padding: 0.25rem 0;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 8vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+      opacity 500ms var(--ease-out),
+      transform 500ms var(--ease-out);
+  }
+
+  .header[data-open="true"] .links a {
+    opacity: 1;
+    transform: none;
+    transition-delay: calc(200ms + var(--i) * 60ms);
+  }
+
+  .links a::after {
+    display: none;
+  }
+
+  .cta {
+    min-height: 3.25rem;
+    padding-inline: 1.6rem;
+  }
+}

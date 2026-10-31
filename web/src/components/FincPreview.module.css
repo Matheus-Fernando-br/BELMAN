@@ -1,0 +1,234 @@
+.device {
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--white);
+  box-shadow: var(--shadow-lift);
+  overflow: hidden;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fafafa;
+}
+
+.chrome span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--light-gray);
+}
+
+.chrome p {
+  margin-left: auto;
+  margin-right: auto;
+  padding: 2px 18px;
+  border-radius: var(--r-pill);
+  background: var(--off-white);
+  color: var(--gray);
+  font-size: 0.68rem;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 300px;
+}
+
+.side {
+  display: none;
+  padding: 16px 12px;
+  background: var(--ink);
+  color: var(--on-ink-muted);
+}
+
+.logo {
+  margin-bottom: 18px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--white);
+  letter-spacing: -0.03em;
+}
+
+.side li {
+  padding: 7px 10px;
+  border-radius: 6px;
+}
+
+.side li[data-active="true"] {
+  background: rgb(255 255 255 / 0.1);
+  color: var(--white);
+}
+
+.main {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: #fbfbfb;
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.kpi {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+}
+
+.kpi p {
+  color: var(--gray);
+  font-size: 0.62rem;
+}
+
+.kpi strong {
+  font-family: var(--font-display);
+  font-size: clamp(0.78rem, 0.6rem + 0.5vw, 1rem);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.kpi span {
+  font-size: 0.62rem;
+  color: var(--charcoal);
+}
+
+.lower {
+  display: grid;
+  gap: 8px;
+}
+
+.chart,
+.list {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+}
+
+.chart p,
+.list p {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.chart svg {
+  width: 100%;
+  height: 110px;
+  color: var(--ink);
+}
+
+.grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.area {
+  opacity: 0;
+}
+
+[data-reveal="visible"] .line {
+  animation: draw 1.8s var(--ease-out) 400ms forwards;
+}
+
+[data-reveal="visible"] .area {
+  animation: show 1.2s ease 1.4s forwards;
+}
+
+.list ul {
+  display: grid;
+}
+
+.list li {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr auto;
+  gap: 6px;
+  padding-block: 7px;
+  border-top: 1px solid var(--line);
+}
+
+.list span {
+  color: var(--gray);
+}
+
+.list em {
+  white-space: nowrap;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+@media (min-width: 560px) {
+  .app {
+    grid-template-columns: 9.5rem 1fr;
+  }
+
+  .side {
+    display: block;
+  }
+
+  .lower {
+    grid-template-columns: 1.3fr 1fr;
+  }
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes show {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    stroke-dashoffset: 0;
+  }
+
+  .area {
+    opacity: 1;
+  }
+}
+
+:global(.no-js) .line {
+  stroke-dashoffset: 0;
+}
+
+:global(.no-js) .area {
+  opacity: 1;
+}

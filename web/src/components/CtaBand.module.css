@@ -1,0 +1,72 @@
+.band {
+  padding-block: var(--s-6);
+  background: var(--paper);
+}
+
+.inner {
+  position: relative;
+}
+
+.inner > * {
+  position: relative;
+}
+
+.copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: var(--s-4);
+  justify-items: start;
+  padding: clamp(2rem, 1rem + 5vw, 5rem);
+  border-radius: var(--r-l);
+  background: var(--ink);
+  color: var(--on-ink-muted);
+  overflow: hidden;
+}
+
+.title {
+  color: var(--white);
+  font-size: clamp(2.25rem, 1.2rem + 4.4vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  max-width: 12ch;
+}
+
+.copy p {
+  font-size: var(--t-lead);
+  max-width: 40ch;
+  margin-bottom: var(--s-3);
+}
+
+.mark {
+  --mark-hollow: var(--ink);
+  position: absolute !important;
+  z-index: 2;
+  right: calc(var(--gutter) + clamp(1rem, 4vw, 4rem));
+  top: 50%;
+  width: clamp(10rem, 26vw, 24rem);
+  color: var(--white);
+  transform: translateY(-50%);
+  opacity: 0.9;
+  pointer-events: none;
+  animation: spin-slow 40s linear infinite;
+}
+
+@media (max-width: 760px) {
+  .mark {
+    top: auto;
+    bottom: 1.5rem;
+    transform: none;
+    opacity: 0.15;
+  }
+}
+
+@keyframes spin-slow {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  50% {
+    rotate: -6deg;
+  }
+}

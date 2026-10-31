@@ -1,0 +1,131 @@
+.footer {
+  background: var(--ink);
+  color: var(--on-ink-muted);
+  padding-top: var(--s-9);
+  overflow: hidden;
+}
+
+.top {
+  display: grid;
+  gap: var(--s-7);
+}
+
+.brand {
+  display: grid;
+  gap: var(--s-3);
+  max-width: 22rem;
+}
+
+.mark {
+  --mark-hollow: var(--ink);
+  width: 6rem;
+  color: var(--white);
+  margin-bottom: var(--s-3);
+}
+
+.tagline {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--white);
+}
+
+.text {
+  font-size: var(--t-small);
+}
+
+.column {
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+}
+
+.heading {
+  font-family: var(--font-text);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+.column ul {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.column a {
+  color: var(--on-ink);
+  text-decoration: none;
+  font-size: var(--t-small);
+  overflow-wrap: anywhere;
+  transition: color var(--d-fast) var(--ease-out), opacity var(--d-fast);
+}
+
+.column a:hover {
+  color: var(--white);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.social {
+  --social-fg: var(--on-ink-muted);
+  --social-fg-hover: var(--ink);
+  --social-line: var(--on-ink-line);
+  --social-bg-hover: var(--white);
+  display: flex;
+  margin-top: var(--s-2);
+}
+
+.footer :focus-visible {
+  outline-color: var(--white);
+}
+
+/* Giant "a project by bellman" signature */
+.signature {
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(0.75rem, 2vw, 2rem);
+  margin-top: var(--s-9);
+  color: var(--white);
+}
+
+.projectBy {
+  flex: 0 0 auto;
+  width: 30%;
+  height: auto;
+  margin-bottom: 0.5%;
+}
+
+.wordmark {
+  flex: 1 1 auto;
+  width: 64%;
+  height: auto;
+}
+
+.base {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-7);
+  padding-block: var(--s-5);
+  border-top: 1px solid var(--on-ink-line);
+  font-size: var(--t-micro);
+}
+
+.base a {
+  color: var(--on-ink);
+  text-decoration: none;
+}
+
+.base a:hover {
+  text-decoration: underline;
+}
+
+@media (min-width: 760px) {
+  .top {
+    grid-template-columns: 1.6fr 1fr 1fr 1.3fr;
+  }
+}

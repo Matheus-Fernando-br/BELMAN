@@ -1,0 +1,220 @@
+/* The form sits on the ink contact panel. */
+
+.form {
+  display: grid;
+  gap: var(--s-5);
+}
+
+.fieldset {
+  display: grid;
+  gap: var(--s-5);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset:disabled {
+  opacity: 0.7;
+}
+
+.row {
+  display: grid;
+  gap: var(--s-5);
+}
+
+.field {
+  display: grid;
+  gap: var(--s-2);
+  align-content: start;
+  min-width: 0;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-3);
+}
+
+.labelRow label {
+  color: var(--on-ink);
+  font-size: var(--t-small);
+  font-weight: 560;
+}
+
+.optional,
+.hint {
+  color: var(--on-ink-muted);
+  font-weight: 400;
+}
+
+.hint {
+  font-size: var(--t-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--on-ink-line);
+  border-radius: var(--r-s);
+  background: var(--ink-raised);
+  color: var(--on-ink);
+  font-size: 1rem;
+  transition: border-color var(--d-fast) var(--ease-out), box-shadow var(--d-fast) var(--ease-out);
+}
+
+.field select {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--on-ink-muted) 50%),
+    linear-gradient(135deg, var(--on-ink-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.15rem) 1.3rem,
+    calc(100% - 0.8rem) 1.3rem;
+  background-size: 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+}
+
+.field select option {
+  background: var(--ink-raised);
+  color: var(--on-ink);
+}
+
+.field textarea {
+  min-height: 9.5rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.field textarea::placeholder {
+  color: #6f6f6f;
+}
+
+.field input:hover,
+.field select:hover,
+.field textarea:hover {
+  border-color: #4a4a4a;
+}
+
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline: none;
+  border-color: #ffffff;
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.16);
+}
+
+.field[data-invalid="true"] input,
+.field[data-invalid="true"] select,
+.field[data-invalid="true"] textarea {
+  border-color: var(--danger-on-ink);
+}
+
+.error {
+  color: var(--danger-on-ink);
+  font-size: var(--t-micro);
+  font-weight: 500;
+}
+
+.trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.alert {
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--danger-on-ink);
+  border-radius: var(--r-s);
+  background: rgb(255 143 143 / 0.08);
+  color: var(--on-ink);
+  font-size: var(--t-small);
+}
+
+.alert:focus-visible {
+  outline: 2px solid var(--danger-on-ink);
+}
+
+.footer {
+  display: grid;
+  gap: var(--s-3);
+  align-items: center;
+}
+
+.submit {
+  width: 100%;
+}
+
+.submit[aria-disabled="true"] {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.note {
+  color: var(--on-ink-muted);
+  font-size: var(--t-micro);
+}
+
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgb(0 0 0 / 0.25);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+
+.success {
+  display: grid;
+  gap: var(--s-4);
+  justify-items: start;
+  padding-block: var(--s-6);
+  color: var(--on-ink-muted);
+}
+
+.success:focus {
+  outline: none;
+}
+
+.successMark {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--success-on-ink);
+  background:
+    linear-gradient(var(--success-on-ink), var(--success-on-ink)) center / 0.75rem 0.75rem no-repeat;
+}
+
+.successTitle {
+  color: var(--on-ink);
+  font-size: var(--t-h3);
+}
+
+
+@media (min-width: 640px) {
+  .row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footer {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--s-5);
+  }
+
+  .submit {
+    width: auto;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
