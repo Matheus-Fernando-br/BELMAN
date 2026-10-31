@@ -3,17 +3,31 @@
   inset: 0 0 auto;
   z-index: 50;
   height: var(--header-h);
-  transition:
-    background-color var(--d-base) var(--ease-out),
-    box-shadow var(--d-base) var(--ease-out),
-    backdrop-filter var(--d-base) var(--ease-out);
 }
 
-.header[data-scrolled="true"] {
-  background: rgb(245 245 245 / 0.78);
-  backdrop-filter: saturate(160%) blur(16px);
+/* The frosted bar lives on a pseudo-element: a backdrop-filter on the header
+   itself would become the containing block of the fixed mobile menu (Safari),
+   squeezing the full-screen menu into the header's height. */
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgb(245 245 245 / 0.82);
   -webkit-backdrop-filter: saturate(160%) blur(16px);
+  backdrop-filter: saturate(160%) blur(16px);
   box-shadow: 0 1px 0 rgb(0 0 0 / 0.06);
+  opacity: 0;
+  transition: opacity var(--d-base) var(--ease-out);
+  pointer-events: none;
+}
+
+.header[data-scrolled="true"]::before {
+  opacity: 1;
+}
+
+.header[data-open="true"]::before {
+  opacity: 0;
 }
 
 .bar {
