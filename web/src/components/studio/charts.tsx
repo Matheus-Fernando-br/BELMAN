@@ -124,7 +124,7 @@ function YAxis({ max, money }: { max: number; money: boolean }) {
 /** Multi-series line chart with crosshair tooltip and end labels. */
 export function LineChart({ title, labels, series, money = true }: { title: string; labels: string[]; series: Series[]; money?: boolean }) {
   const id = useId();
-  const max = niceMax(Math.max(...series.flatMap((s) => s.values)) * 1.08);
+  const max = money ? niceMax(Math.max(...series.flatMap((s) => s.values)) * 1.08) : Math.max(4, niceMax(Math.max(...series.flatMap((s) => s.values)) * 1.08));
   const { ref, index, setIndex, onMove } = useHover(labels.length);
   const x = (i: number) => PAD.left + ((W - PAD.left - PAD.right) * i) / Math.max(1, labels.length - 1);
   const y = (v: number) => PAD.top + (H - PAD.top - PAD.bottom) * (1 - v / max);
@@ -205,7 +205,7 @@ export function LineChart({ title, labels, series, money = true }: { title: stri
 export function StackedColumns({ title, labels, series, money = true }: { title: string; labels: string[]; series: Series[]; money?: boolean }) {
   const id = useId();
   const totals = labels.map((_, i) => series.reduce((sum, s) => sum + s.values[i], 0));
-  const max = niceMax(Math.max(...totals) * 1.12);
+  const max = money ? niceMax(Math.max(...totals) * 1.12) : Math.max(4, niceMax(Math.max(...totals) * 1.12));
   const { ref, index, setIndex, onMove } = useHover(labels.length, true);
   const band = (W - PAD.left - PAD.right) / labels.length;
   const x = (i: number) => PAD.left + band * (i + 0.5);
