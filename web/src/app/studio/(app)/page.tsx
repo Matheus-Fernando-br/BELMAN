@@ -7,6 +7,7 @@ import { cashToday, loadAllocated, loadTransactions, todayISO } from "@/lib/stud
 import { addMonths, cashFlow, lastDayOfMonth, monthKey, monthLabel, monthsBetween } from "@/lib/studio/finance-math";
 import { sampleDashboard } from "@/lib/studio/sample-data";
 import { requireStudio, type Entity } from "@/lib/studio/session";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -90,6 +91,42 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ];
     data.alerts = [...realAlerts, ...data.alerts.filter((a) => !/pagamento|vence|Conta do/i.test(a.text))];
   }
+
+  // Clientes e MRR reais dos produtos integrados (canal assinado e cifrado).
+  const integrated = scopeEntities.filter((e) => e.kind === "product" && e.metrics_url);
+  const pending = scopeEntities.filter((e) => e.kind === "product" && !e.metrics_url);
+  let customersReal = false;
+  if (integrated.length) {
+    const supabase = await createClient();
+    const ids = integrated.map((e) => e.id);
+    const [{ data: revenueSnaps }, { data: usageSnaps }] = await Promise.all([
+      ctx.canSeeFinance
+        ? supabase.from("product_revenue_snapshots").select("entity_id,day,subscriptions,mrr_cents,monthly").in("entity_id", ids).order("day", { ascending: false })
+        : Promise.resolve({ data: null }),
+      supabase.from("product_usage_snapshots").select("entity_id,day,users").in("entity_id", ids).order("day", { ascending: false }),
+    ]);
+    const latest = <T extends { entity_id: string }>(rows: T[] | null) => ids.map((id) => rows?.find((r) => r.entity_id === id)).filter(Boolean) as T[];
+    const rev = latest(revenueSnaps as { entity_id: string; subscriptions: { active: number }; mrr_cents: number; monthly: { month: string; activeSubscriptionsAtEnd: number }[] }[] | null);
+    const use = latest(usageSnaps as { entity_id: string; users: { total: number; active30d: number } }[] | null);
+    if (rev.length) {
+      const today = todayISO();
+      const keys = monthsBetween(addMonths(monthKey(today), -5), monthKey(today));
+      const at = (r: (typeof rev)[number]) => keys.map((k) => r.monthly.find((m) => m.month === k)?.activeSubscriptionsAtEnd ?? 0);
+      const totals = keys.map((_, i) => rev.reduce((sum, r) => sum + at(r)[i], 0));
+      data.kpis.customers = rev.reduce((sum, r) => sum + r.subscriptions.active, 0);
+      data.kpis.prevCustomers = totals.at(-2) ?? 0;
+      data.kpis.mrr = rev.reduce((sum, r) => sum + r.mrr_cents, 0) / 100;
+      data.customersByProduct = rev.map((r) => ({ slug: ctx.entities.find((e) => e.id === r.entity_id)!.slug, values: at(r) }));
+      customersReal = true;
+    } else if (use.length) {
+      data.kpis.customers = use.reduce((sum, u) => sum + u.users.active30d, 0);
+      data.kpis.prevCustomers = 0;
+      customersReal = true;
+    }
+  }
+  const customersNote = customersReal
+    ? `${integrated.map((e) => e.name).join(", ")}${pending.length ? ` · ${pending.map((e) => e.name).join(", ")} em breve` : ""}`
+    : "exemplo";
   const productSeries = data.revenueByProduct.map((p) => ({
     label: bySlug.get(p.slug)?.name ?? p.slug,
     color: bySlug.get(p.slug)?.color ?? "#777777",
@@ -159,12 +196,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <span className="st-delta">disponível hoje</span>
           </div>
           <div className="st-kpi">
-            <dt>Clientes ativos · exemplo</dt>
+            <dt>{ctx.canSeeFinance ? "Assinantes ativos" : "Clientes ativos"} · {customersNote}</dt>
             <dd>{data.kpis.customers.toLocaleString("pt-BR")}</dd>
             <Delta now={data.kpis.customers} prev={data.kpis.prevCustomers} />
           </div>
           <div className="st-kpi">
-            <dt>MRR · exemplo</dt>
+            <dt>MRR · {customersNote}</dt>
             <dd>{brl(data.kpis.mrr)}</dd>
             <span className="st-delta">receita recorrente mensal</span>
           </div>
@@ -172,7 +209,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       ) : (
         <dl className="st-kpis">
           <div className="st-kpi">
-            <dt>Clientes ativos</dt>
+            <dt>{customersReal ? "Usuários ativos (30 dias)" : "Clientes ativos"} · {customersNote}</dt>
             <dd>{data.kpis.customers.toLocaleString("pt-BR")}</dd>
             <Delta now={data.kpis.customers} prev={data.kpis.prevCustomers} />
           </div>
@@ -224,7 +261,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <article className="st-card">
           <div className="st-card-head">
             <h2>Evolução de clientes</h2>
-            <span>exemplo · Fase 3</span>
+            <span>{customersReal ? `assinantes no fim do mês · ${customersNote}` : "exemplo · Fase 3"}</span>
           </div>
           {customerSeries.length ? (
             <LineChart title="Clientes ativos por produto" labels={data.months} series={customerSeries} money={false} />

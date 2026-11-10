@@ -55,3 +55,11 @@ Central de gestão da holding e dos produtos. Acesso pelo link "Bellman Studio" 
 ### Financeiro (Fase 1)
 
 `/studio/financeiro` (somente Sócio/Admin): visão geral, lançamentos (contas a pagar e a receber com previsto x realizado, comprovante até 4 MB), fluxo de caixa com saldo projetado, resultados por produto com rateio, orçamento por categoria, recorrentes (geram lançamentos previstos para 6 meses), aportes dos sócios e planejamento (burn rate, runway, margem, ponto de equilíbrio, cenários). Categorias, contas e regras de rateio ficam em Configurações → Financeiro. Valores em centavos; regras de acesso e auditoria no banco ([`0002_finance.sql`](web/supabase/migrations/0002_finance.sql)).
+
+### Integração com os produtos (somente leitura)
+
+O Studio lê métricas e pagamentos dos produtos por um canal **assinado e cifrado** ([`product-link.ts`](web/src/lib/studio/product-link.ts), mesmo protocolo de `backend/src/services/studioLink.js` do Obra Fácil): HMAC-SHA256 com chaves derivadas (HKDF) de um segredo que nunca trafega, anti-replay (horário + nonce) e resposta em AES-256-GCM amarrada ao pedido. Só agregados e códigos pseudônimos; nenhum dado pessoal.
+
+- Sincroniza todo dia às 6h (Vercel Cron → `/api/studio/sync`, protegido por `CRON_SECRET`) e pelo botão "Sincronizar agora" na página do produto.
+- Pagamentos aprovados viram receita realizada no Financeiro (idempotente por `external_ref`; estornos cancelam o lançamento).
+- Segredos por produto: `STUDIO_SECRET_<SLUG>` (ex.: `STUDIO_SECRET_OBRA_FACIL`), só na Vercel, marcados como *Sensitive*.
