@@ -8,6 +8,7 @@ export function SettingsTabs({ isAdmin }: { isAdmin: boolean }) {
   const tabs = [
     ...(isAdmin ? [{ href: "/studio/configuracoes/usuarios", label: "Usuários e permissões" }] : []),
     { href: "/studio/configuracoes/produtos", label: "Produtos do ecossistema" },
+    ...(isAdmin ? [{ href: "/studio/configuracoes/financeiro", label: "Financeiro" }] : []),
     { href: "/studio/configuracoes/seguranca", label: "Minha conta e segurança" },
     ...(isAdmin ? [{ href: "/studio/configuracoes/auditoria", label: "Auditoria" }] : []),
   ];

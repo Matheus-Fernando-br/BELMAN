@@ -51,3 +51,7 @@ Central de gestão da holding e dos produtos. Acesso pelo link "Bellman Studio" 
 | `SUPABASE_URL` | URL do projeto Supabase |
 | `SUPABASE_PUBLISHABLE_KEY` | Chave pública do Supabase |
 | `SUPABASE_SECRET_KEY` | **Secreta.** Necessária só para enviar convites pelo Studio. Cadastre como *Sensitive* na Vercel. |
+
+### Financeiro (Fase 1)
+
+`/studio/financeiro` (somente Sócio/Admin): visão geral, lançamentos (contas a pagar e a receber com previsto x realizado, comprovante até 4 MB), fluxo de caixa com saldo projetado, resultados por produto com rateio, orçamento por categoria, recorrentes (geram lançamentos previstos para 6 meses), aportes dos sócios e planejamento (burn rate, runway, margem, ponto de equilíbrio, cenários). Categorias, contas e regras de rateio ficam em Configurações → Financeiro. Valores em centavos; regras de acesso e auditoria no banco ([`0002_finance.sql`](web/supabase/migrations/0002_finance.sql)).

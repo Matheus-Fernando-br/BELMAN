@@ -3,6 +3,8 @@ import { LineChart, StackedColumns } from "@/components/studio/charts";
 import { brl } from "@/lib/studio/format";
 import { Icon } from "@/components/studio/Icon";
 import { CONSOLIDATED, filterOptions, resolveFilter } from "@/lib/studio/filter";
+import { cashToday, loadAllocated, loadTransactions, todayISO } from "@/lib/studio/finance";
+import { addMonths, cashFlow, lastDayOfMonth, monthKey, monthLabel, monthsBetween } from "@/lib/studio/finance-math";
 import { sampleDashboard } from "@/lib/studio/sample-data";
 import { requireStudio, type Entity } from "@/lib/studio/session";
 
@@ -37,6 +39,57 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const scope = current.slug === CONSOLIDATED ? ctx.visible.map((e) => e.slug) : [current.slug];
   const data = sampleDashboard(scope);
   const bySlug = new Map(ctx.entities.map((e) => [e.slug, e]));
+  const scopeEntities = ctx.visible.filter((e) => scope.includes(e.slug));
+  const scopeIds = scopeEntities.map((e) => e.id);
+
+  // Financeiro com dados reais (Fase 1). Clientes, MRR, vendas, tarefas e desenvolvimento seguem de exemplo.
+  let realAlerts: { tone: "bad" | "warn"; text: string; entity: string }[] = [];
+  if (ctx.canSeeFinance && scopeIds.length) {
+    const today = todayISO();
+    const month = monthKey(today);
+    const months = monthsBetween(addMonths(month, -5), month);
+    const in3 = new Date(Date.parse(today) + 3 * 864e5).toISOString().slice(0, 10);
+    const [allocated, cash, open] = await Promise.all([
+      loadAllocated(scopeIds, `${months[0]}-01`, lastDayOfMonth(month)),
+      cashToday(scopeIds),
+      loadTransactions(scopeIds, "2000-01-01", in3),
+    ]);
+    const flows = cashFlow(allocated, months);
+    data.months = months.map((m) => monthLabel(m));
+    data.revenue = flows.map((f) => f.realizedIn / 100);
+    data.expenses = flows.map((f) => f.realizedOut / 100);
+    data.revenueByProduct = scopeEntities
+      .filter((e) => e.kind === "product")
+      .map((e) => ({
+        slug: e.slug,
+        values: months.map(
+          (m) =>
+            allocated
+              .filter((r) => r.entity_id === e.id && r.type === "income" && !r.cancelled && r.paid_date?.startsWith(m))
+              .reduce((sum, r) => sum + (r.paid_amount_cents ?? 0), 0) / 100,
+        ),
+      }));
+    const now = flows.at(-1)!;
+    const prev = flows.at(-2)!;
+    data.kpis = {
+      ...data.kpis,
+      revenue: now.realizedIn / 100,
+      prevRevenue: prev.realizedIn / 100,
+      expenses: now.realizedOut / 100,
+      prevExpenses: prev.realizedOut / 100,
+      result: (now.realizedIn - now.realizedOut) / 100,
+      cash: cash / 100,
+    };
+    const overdueIn = open.filter((t) => t.status === "overdue" && t.type === "income");
+    const overdueOut = open.filter((t) => t.status === "overdue" && t.type === "expense");
+    const dueSoon = open.filter((t) => t.status === "planned" && t.type === "expense" && t.due_date >= today && t.due_date <= in3);
+    realAlerts = [
+      ...(overdueIn.length ? [{ tone: "bad" as const, text: `${overdueIn.length} recebimento(s) em atraso`, entity: overdueIn[0].entity_slug }] : []),
+      ...(overdueOut.length ? [{ tone: "bad" as const, text: `${overdueOut.length} conta(s) a pagar em atraso`, entity: overdueOut[0].entity_slug }] : []),
+      ...dueSoon.map((t) => ({ tone: "warn" as const, text: `${t.description} vence em ${t.due_date.split("-").reverse().slice(0, 2).join("/")}`, entity: t.entity_slug })),
+    ];
+    data.alerts = [...realAlerts, ...data.alerts.filter((a) => !/pagamento|vence|Conta do/i.test(a.text))];
+  }
   const productSeries = data.revenueByProduct.map((p) => ({
     label: bySlug.get(p.slug)?.name ?? p.slug,
     color: bySlug.get(p.slug)?.color ?? "#777777",
@@ -68,8 +121,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <p className="st-banner" data-tone="info" role="note">
         <Icon name="alert" className="st-swatch" />
         <span>
-          <strong>Dados de exemplo.</strong> Os números reais entram a partir da Fase 1 (financeiro) e da Fase 3
-          (vendas e métricas dos produtos).
+          {ctx.canSeeFinance ? (
+            <>
+              <strong>Receitas, despesas, resultado e caixa são reais</strong> (Financeiro). Clientes, MRR, vendas, tarefas,
+              desenvolvimento e conteúdo ainda são <strong>dados de exemplo</strong> até as Fases 2 e 3.
+            </>
+          ) : (
+            <>
+              <strong>Dados de exemplo.</strong> Clientes, vendas, tarefas e desenvolvimento entram nas Fases 2 e 3.
+            </>
+          )}
         </span>
       </p>
 
@@ -98,12 +159,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <span className="st-delta">disponível hoje</span>
           </div>
           <div className="st-kpi">
-            <dt>Clientes ativos</dt>
+            <dt>Clientes ativos · exemplo</dt>
             <dd>{data.kpis.customers.toLocaleString("pt-BR")}</dd>
             <Delta now={data.kpis.customers} prev={data.kpis.prevCustomers} />
           </div>
           <div className="st-kpi">
-            <dt>MRR</dt>
+            <dt>MRR · exemplo</dt>
             <dd>{brl(data.kpis.mrr)}</dd>
             <span className="st-delta">receita recorrente mensal</span>
           </div>
@@ -163,7 +224,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <article className="st-card">
           <div className="st-card-head">
             <h2>Evolução de clientes</h2>
-            <span>ativos no fim do mês</span>
+            <span>exemplo · Fase 3</span>
           </div>
           {customerSeries.length ? (
             <LineChart title="Clientes ativos por produto" labels={data.months} series={customerSeries} money={false} />
@@ -197,7 +258,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <article className="st-card">
             <div className="st-card-head">
               <h2>Desempenho comercial</h2>
-              <span>conversão {(data.conversion * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span>
+              <span>exemplo · conversão {(data.conversion * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span>
             </div>
             <div className="st-funnel">
               {data.funnel.map((f) => (

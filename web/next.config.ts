@@ -25,6 +25,10 @@ const csp = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // Comprovantes do Studio (até 4 MB; a Vercel limita o corpo da requisição a 4,5 MB) chegam por Server Action.
+    serverActions: { bodySizeLimit: "4.4mb" },
+  },
   reactStrictMode: true,
   images: {
     formats: ["image/avif", "image/webp"],
