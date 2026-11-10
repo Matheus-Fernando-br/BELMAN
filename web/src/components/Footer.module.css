@@ -78,6 +78,14 @@
   margin-top: var(--s-2);
 }
 
+.column .studio {
+  justify-self: start;
+  margin-top: var(--s-2);
+  color: var(--on-ink-muted);
+  font-size: var(--t-micro);
+  letter-spacing: 0.04em;
+}
+
 .footer :focus-visible {
   outline-color: var(--white);
 }

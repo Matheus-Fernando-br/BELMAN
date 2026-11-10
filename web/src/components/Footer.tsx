@@ -51,6 +51,9 @@ export function Footer() {
             </li>
           </ul>
           <SocialIcons className={styles.social} />
+          <a href="/studio" className={styles.studio}>
+            Bellman Studio
+          </a>
         </div>
       </div>
 
