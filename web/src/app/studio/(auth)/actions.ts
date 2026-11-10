@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { passwordProblem } from "@/lib/studio/password";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 
 export type FormState = { error?: string; message?: string } | undefined;
 
@@ -27,7 +27,9 @@ export async function signIn(_: FormState, form: FormData): Promise<FormState> {
   if (!EMAIL.test(email) || !password) return { error: "Informe e-mail e senha." };
 
   const supabase = await createClient();
-  const { data: lockedUntil } = await supabase.rpc("studio_login_locked_until", { p_email: email });
+  // A trava de tentativas roda com a chave secreta (só o servidor pode consultá-la).
+  const guard = createAdminClient();
+  const { data: lockedUntil } = guard ? await guard.rpc("studio_login_locked_until", { p_email: email }) : { data: null };
   if (lockedUntil) {
     const time = new Date(lockedUntil as string).toLocaleTimeString("pt-BR", {
       hour: "2-digit",
@@ -38,7 +40,7 @@ export async function signIn(_: FormState, form: FormData): Promise<FormState> {
   }
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  await supabase.rpc("studio_record_login", { p_email: email, p_success: !error });
+  if (guard) await guard.rpc("studio_record_login", { p_email: email, p_success: !error });
   if (error) return { error: "E-mail ou senha incorretos." };
 
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
