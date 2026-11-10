@@ -320,3 +320,8 @@ insert into public.entities (slug, name, kind, color, description, site_url, adm
 on conflict (slug) do nothing;
 
 insert into studio.bootstrap_admins (email) values ('bellman.adm@gmail.com') on conflict do nothing;
+
+-- Função automática do Supabase (habilita RLS em tabelas novas): não precisa ser chamável pela API.
+do $$ begin
+  revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+exception when undefined_function then null; end $$;
