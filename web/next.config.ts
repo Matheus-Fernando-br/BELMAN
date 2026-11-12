@@ -8,15 +8,25 @@ const apiOrigin = (() => {
   }
 })();
 
+// Mídias das redes sociais vêm por links assinados (temporários) do Storage privado do Supabase.
+const supabaseOrigin = (() => {
+  try {
+    return new URL(process.env.SUPABASE_URL ?? "").origin;
+  } catch {
+    return "";
+  }
+})();
+
 const isDev = process.env.NODE_ENV !== "production";
 
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src 'self' data: blob:${supabaseOrigin ? ` ${supabaseOrigin}` : ""}`,
+  `media-src 'self' blob:${supabaseOrigin ? ` ${supabaseOrigin}` : ""}`,
   "font-src 'self'",
-  `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ""}${isDev ? " ws:" : ""}`,
+  `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ""}${supabaseOrigin ? ` ${supabaseOrigin}` : ""}${isDev ? " ws:" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
