@@ -4,6 +4,7 @@ import { cache } from "react";
 import { open, seal } from "@shared/social/crypto";
 import {
   debugToken,
+  instagramAccounts,
   detectTokenKind,
   exchangeForLongLived,
   MetaClient,
@@ -62,8 +63,8 @@ export async function loadAccount(entityId: string) {
   return data as Account | null;
 }
 
-// ---------------------------------------------------------------- app da Meta
-export async function loadMetaApp(): Promise<(MetaApp & { id: string }) | null> {
+// ---------------------------------------------------------------- app da Meta (opcional)
+async function loadMetaApp(): Promise<(MetaApp & { id: string }) | null> {
   const { data } = await admin().rpc("social_meta_app_get", { p_id: null });
   const row = (data as { id: string; app_id: string | null; app_secret_cipher: string | null; ig_app_id: string | null; ig_app_secret_cipher: string | null }[] | null)?.[0];
   if (!row) return null;
@@ -76,31 +77,18 @@ export async function loadMetaApp(): Promise<(MetaApp & { id: string }) | null> 
   };
 }
 
-export async function saveMetaApp(input: { id?: string | null; label: string; appId: string | null; appSecret: string | null; igAppId: string | null; igAppSecret: string | null }, actor: string) {
-  const { error } = await admin().rpc("social_meta_app_put", {
-    p_id: input.id || null,
-    p_label: input.label,
-    p_app_id: input.appId,
-    p_app_secret_cipher: input.appSecret ? seal(input.appSecret) : null,
-    p_ig_app_id: input.igAppId,
-    p_ig_app_secret_cipher: input.igAppSecret ? seal(input.igAppSecret) : null,
-    p_actor: actor,
-  });
-  if (error) throw new Error("Não foi possível salvar o app da Meta.");
-}
-
 // ---------------------------------------------------------------- conexão
 export type ConnectResult = { username: string; kind: TokenKind; expiresAt: Date | null; missingPublish: boolean };
 
 /**
- * Fluxo "Cole o token" (admin): detecta o tipo → troca por longa duração → debug_token
- * (escopos, validade, IG user id) → perfil → grava conta + credencial cifrada.
+ * "Cole o token" (Sócio/Admin): confere na Meta (validade, permissões e conta do Instagram),
+ * lê o perfil e guarda o token cifrado. Não precisa cadastrar app da Meta.
  */
 export async function connectInstagram(entity: Entity, rawToken: string, actor: string): Promise<ConnectResult> {
   const token = rawToken.trim().replace(/^Bearer\s+/i, "");
   const detected = detectTokenKind(token);
-  if (!detected) throw new Error('Token não reconhecido. Ele começa com "EAA" (login do Facebook) ou "IG" (login do Instagram).');
-  const app = await loadMetaApp();
+  if (!detected) throw new Error('Esse não parece um token da Meta. Ele começa com "EAA" ou "IG".');
+  const app = await loadMetaApp().catch(() => null);
 
   let kind: TokenKind = detected;
   let longToken = token;
@@ -110,23 +98,20 @@ export async function connectInstagram(entity: Entity, rawToken: string, actor: 
   let igUserId: string | null = null;
 
   if (detected === "fb_user") {
-    if (!app?.appId || !app.appSecret) throw new Error("Cadastre o App ID e o App Secret da Meta em Configurações → Meta antes de conectar.");
     const first = await debugToken(token, app);
-    if (!first.isValid) throw new Error("A Meta diz que este token não é válido (vencido ou revogado). Gere outro.");
-    if (first.type === "SYSTEM_USER" || !first.expiresAt) {
-      kind = "fb_system_user"; // não expira: não troca
-    } else {
+    if (!first.isValid) throw new Error("A Meta diz que este token não vale mais (vencido ou revogado). Gere outro.");
+    if (first.type === "SYSTEM_USER" || !first.expiresAt) kind = "fb_system_user";
+    else if (app?.appId && app.appSecret) {
       const ll = await exchangeForLongLived(token, "fb_user", app).catch(() => null);
       if (ll) longToken = ll.token;
     }
-    const info = await debugToken(longToken, app);
+    const info = longToken === token ? first : await debugToken(longToken, app);
     expiresAt = info.expiresAt;
     dataAccessExpiresAt = info.dataAccessExpiresAt;
     scopes = info.scopes;
-    igUserId = info.igUserIds[0] ?? null;
-    if (!igUserId) throw new Error("O token não tem acesso a nenhuma conta do Instagram. Gere o token marcando a conta e as permissões do Instagram.");
+    igUserId = info.igUserIds[0] ?? (await instagramAccounts(longToken).catch(() => []))[0]?.id ?? null;
+    if (!igUserId) throw new Error("O token não dá acesso a nenhuma conta do Instagram. Gere de novo marcando a conta e as permissões do Instagram.");
   } else {
-    // login do Instagram: sem debug_token; troca (se houver secret) e lê /me
     if (app?.igAppSecret) {
       const ll = await exchangeForLongLived(token, "ig_user", app).catch(() => null);
       if (ll) {
@@ -142,7 +127,6 @@ export async function connectInstagram(entity: Entity, rawToken: string, actor: 
 
   const profile = await new MetaClient(longToken, kind, igUserId).getProfile();
   const a = admin();
-  const now = new Date().toISOString();
   const { data: acc, error } = await a
     .from("social_accounts")
     .upsert(
@@ -161,7 +145,7 @@ export async function connectInstagram(entity: Entity, rawToken: string, actor: 
         token_kind: kind,
         token_expires_at: expiresAt?.toISOString() ?? null,
         scopes,
-        last_checked_at: now,
+        last_checked_at: new Date().toISOString(),
         last_error: null,
         updated_by: actor,
         created_by: actor,
@@ -182,9 +166,10 @@ export async function connectInstagram(entity: Entity, rawToken: string, actor: 
     p_refreshed: false,
   });
   if (credErr) throw new Error("Não foi possível guardar o token cifrado.");
-  // posts desta entidade passam a usar a conta
   await a.from("social_posts").update({ account_id: acc.id }).eq("entity_id", entity.id).is("account_id", null);
-  return { username: profile.username, kind, expiresAt, missingPublish: !scopes.some((s) => PUBLISH_SCOPES.includes(s)) };
+  // posts que falharam por falta de conexão voltam para a fila
+  await a.from("social_posts").update({ status: "scheduled", error: null }).eq("entity_id", entity.id).eq("status", "failed").not("approved_at", "is", null).gt("scheduled_at", new Date().toISOString());
+  return { username: profile.username, kind, expiresAt, missingPublish: scopes.length > 0 && !scopes.some((s) => PUBLISH_SCOPES.includes(s)) };
 }
 
 export async function clientFor(accountId: string) {

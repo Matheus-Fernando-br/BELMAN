@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { PUBLISH_SCOPES } from "@shared/social/meta-client";
-import { ACCOUNT_STATUS, dateTimeBR, TOKEN_KIND } from "@/lib/social/labels";
-import { loadAccount, loadMetaApp, requireWorkspace } from "@/lib/social/server";
+import { ACCOUNT_STATUS, dateTimeBR } from "@/lib/social/labels";
+import { loadAccount, requireWorkspace } from "@/lib/social/server";
 import { daysUntil } from "@/lib/studio/scope";
+import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/studio/SubmitButton";
-import { connectAction, disconnectAction, testConnectionAction } from "../../actions";
+import { connectAction, disconnectAction, saveAiKey, testConnectionAction } from "../../actions";
 import { StateForm } from "../../ui";
 
 export const metadata: Metadata = { title: "Conexão · Redes Sociais" };
@@ -13,130 +12,78 @@ export const metadata: Metadata = { title: "Conexão · Redes Sociais" };
 export default async function ConnectionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { ctx, entity } = await requireWorkspace(slug);
-  const [acc, app] = await Promise.all([loadAccount(entity.id), ctx.isAdmin ? loadMetaApp().catch(() => null) : Promise.resolve(null)]);
+  const supabase = await createClient();
+  const [acc, { data: secrets }] = await Promise.all([loadAccount(entity.id), supabase.rpc("social_secret_status")]);
+  const ai = ((secrets ?? []) as { name: string; hint: string | null; updated_at: string }[]).find((s) => s.name === "anthropic_api_key");
   const connected = acc && acc.status !== "disconnected";
-  const missing = connected && !acc.scopes.some((s) => PUBLISH_SCOPES.includes(s));
   const days = acc?.token_expires_at ? daysUntil(acc.token_expires_at) : null;
+  if (!ctx.isAdmin) return <p className="st-restricted">Somente Sócio/Admin cuida das conexões.</p>;
   return (
-    <div className="st-grid" data-cols="2-1">
-      <section className="st-grid">
-        <article className="st-card">
-          <h2>Instagram</h2>
-          {connected ? (
-            <ul className="st-list">
-              <li>
-                <span className="st-grow">Conta</span>
-                <strong>@{acc.username}</strong>
-              </li>
-              <li>
-                <span className="st-grow">Situação</span>
-                <span className="st-status" data-tone={ACCOUNT_STATUS[acc.status][1]}>
-                  {ACCOUNT_STATUS[acc.status][0]}
-                </span>
-              </li>
-              <li>
-                <span className="st-grow">Tipo do token</span>
-                <span>{acc.token_kind ? TOKEN_KIND[acc.token_kind] : "—"}</span>
-              </li>
-              <li>
-                <span className="st-grow">Expira em</span>
-                <span>{acc.token_expires_at ? `${dateTimeBR(acc.token_expires_at)} (${days} dias)` : "Não expira"}</span>
-              </li>
-              <li>
-                <span className="st-grow">Próxima renovação</span>
-                <span>
-                  {acc.token_kind === "ig_user"
-                    ? "Automática (job diário, aos 50 dias)"
-                    : acc.token_kind === "fb_user"
-                      ? "Sem renovação automática: troque por um token de System User"
-                      : "Não precisa (checagem diária)"}
-                </span>
-              </li>
-              <li>
-                <span className="st-grow">Escopos</span>
-                <span style={{ textAlign: "right" }}>{acc.scopes.join(", ") || "—"}</span>
-              </li>
-              <li>
-                <span className="st-grow">Última checagem</span>
-                <span>{dateTimeBR(acc.last_checked_at)}</span>
-              </li>
-              {acc.last_error && (
-                <li>
-                  <span className="st-grow">Último erro</span>
-                  <span className="st-status" data-tone="bad">
-                    {acc.last_error}
-                  </span>
-                </li>
-              )}
-            </ul>
-          ) : (
-            <p className="st-hint">Nenhuma conta conectada para {entity.name}.</p>
-          )}
-          {missing && <p className="st-alert">Falta a permissão de publicação (instagram_business_content_publish ou instagram_content_publish). Gere o token de novo marcando essa permissão.</p>}
-          {connected && ctx.isAdmin && (
-            <div className="st-actions">
-              <StateForm action={testConnectionAction.bind(null, slug)} submit="Testar conexão" pending="Testando…" variant="ghost" inline>
-                <input type="hidden" name="account_id" value={acc.id} />
-              </StateForm>
-              <form action={disconnectAction.bind(null, slug)}>
-                <input type="hidden" name="account_id" value={acc.id} />
-                <SubmitButton variant="danger" pendingLabel="Desconectando…">
-                  Desconectar
-                </SubmitButton>
-              </form>
-            </div>
-          )}
-        </article>
-
-        {ctx.isAdmin ? (
-          <article className="st-card">
-            <h2>{connected ? "Trocar o token" : "Conectar"}</h2>
-            {!app?.appId && (
-              <p className="st-banner">
-                Antes, cadastre o app da Meta em <Link href="/studio/configuracoes/meta">Configurações → Meta</Link>.
-              </p>
-            )}
-            <StateForm action={connectAction.bind(null, slug)} submit="Conectar" pending="Validando com a Meta…">
-              <div className="st-field">
-                <label htmlFor="token">Cole o token de acesso</label>
-                <input id="token" name="token" type="password" autoComplete="off" spellCheck={false} className="st-input" placeholder="EAA… ou IG…" />
-                <span className="st-hint">
-                  O token é validado na Meta, trocado por um de longa duração e guardado cifrado (AES-256-GCM). Ele nunca volta para esta tela.
-                </span>
-              </div>
-            </StateForm>
-          </article>
-        ) : (
-          <p className="st-restricted">Somente Sócio/Admin conecta ou troca tokens.</p>
-        )}
-      </section>
-
-      <aside className="st-grid">
-        {(acc?.token_kind === "fb_user" || !connected) && (
-          <article className="st-card">
-            <h2>Recomendado: token de System User (não expira)</h2>
-            <ol className="st-hint" style={{ paddingLeft: "1.1rem", lineHeight: 1.6 }}>
-              <li>
-                Abra o <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noreferrer">Business Manager → Usuários do sistema</a>.
-              </li>
-              <li>Adicionar → nome “Bellman Studio”, função Admin.</li>
-              <li>Atribuir ativos: o app “Bellman Studio” (controle total) e a conta do Instagram (@obra.facil.app).</li>
-              <li>
-                Gerar token → escolha o app e marque <code>instagram_basic</code>, <code>instagram_content_publish</code>, <code>instagram_manage_comments</code>,{" "}
-                <code>instagram_manage_insights</code>, <code>pages_show_list</code> e <code>business_management</code>. Validade: nunca.
-              </li>
-              <li>Cole o token aqui ao lado. Pronto: sem renovação manual.</li>
-            </ol>
-          </article>
-        )}
-        <article className="st-card">
-          <h2>O que o Studio faz e não faz</h2>
-          <p className="st-hint">
-            Usa só APIs oficiais da Meta: publica posts aprovados, lê métricas e, se você ativar, responde comentários nos seus próprios posts. Nunca curte, segue, comenta em perfis de
-            terceiros, manda DM em massa nem faz login no instagram.com.
+    <div className="st-grid" data-cols="2" style={{ marginTop: "1rem" }}>
+      <article className="st-card">
+        <div className="st-card-head">
+          <h2>1. Instagram</h2>
+          <span className="st-status" data-tone={ACCOUNT_STATUS[acc?.status ?? "disconnected"][1]}>
+            {ACCOUNT_STATUS[acc?.status ?? "disconnected"][0]}
+          </span>
+        </div>
+        {connected && (
+          <p>
+            <strong>@{acc.username}</strong>
+            <br />
+            <span className="st-hint">
+              {acc.token_expires_at ? `Token vale até ${dateTimeBR(acc.token_expires_at)} (${days} dias). Você será avisado 10 dias antes.` : "Token que não expira."}
+            </span>
           </p>
-        </article>
-      </aside>
+        )}
+        {acc?.last_error && acc.status !== "connected" && <p className="st-alert">{acc.last_error}</p>}
+        <StateForm action={connectAction.bind(null, slug)} submit={connected ? "Trocar token" : "Conectar"} pending="Conferindo com a Meta…">
+          <div className="st-field">
+            <label htmlFor="token">{connected ? "Cole o token novo (quando o atual vencer)" : "Cole o seu token de acesso do Instagram"}</label>
+            <input id="token" name="token" type="password" autoComplete="off" spellCheck={false} className="st-input" placeholder="EAA…" />
+            <span className="st-hint">Fica guardado cifrado e nunca aparece de novo na tela.</span>
+          </div>
+        </StateForm>
+        {connected && (
+          <div className="st-actions">
+            <StateForm action={testConnectionAction.bind(null, slug)} submit="Testar" pending="Testando…" variant="ghost" inline>
+              <input type="hidden" name="account_id" value={acc.id} />
+            </StateForm>
+            <form action={disconnectAction.bind(null, slug)}>
+              <input type="hidden" name="account_id" value={acc.id} />
+              <SubmitButton variant="danger">Desconectar</SubmitButton>
+            </form>
+          </div>
+        )}
+        <details>
+          <summary className="st-hint" style={{ cursor: "pointer" }}>
+            Quer um token que nunca vence?
+          </summary>
+          <p className="st-hint">
+            No Business Manager da Meta: Usuários do sistema → Adicionar → atribua o app e a conta do Instagram → Gerar token com as permissões do Instagram e validade “Nunca”. Cole
+            aqui no lugar do atual.
+          </p>
+        </details>
+      </article>
+
+      <article className="st-card">
+        <div className="st-card-head">
+          <h2>2. Chave da IA</h2>
+          <span className="st-status" data-tone={ai ? "ok" : "neutral"}>
+            {ai ? `Salva (${ai.hint})` : "Não configurada"}
+          </span>
+        </div>
+        <p className="st-hint">
+          A IA (Claude, da Anthropic) escreve os textos dos posts. Crie a chave em console.anthropic.com → API Keys e cole aqui. Cada post custa poucos centavos de dólar; o gasto aparece
+          no Financeiro.
+        </p>
+        <StateForm action={saveAiKey.bind(null, slug)} submit={ai ? "Trocar chave" : "Salvar chave"} pending="Salvando…">
+          <div className="st-field">
+            <label htmlFor="key">Chave da API</label>
+            <input id="key" name="key" type="password" autoComplete="off" spellCheck={false} className="st-input" placeholder="sk-ant-…" />
+          </div>
+        </StateForm>
+      </article>
     </div>
   );
 }

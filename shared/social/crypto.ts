@@ -1,12 +1,17 @@
 // AES-256-GCM para tokens e app secrets das redes sociais.
 // Formato: v1:iv:tag:data (base64url). Chave: SOCIAL_ENC_KEY = 32 bytes em base64.
 // Usado pelo web (Vercel) e pelo worker (Render). Sem dependências além do Node.
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 export class CryptoConfigError extends Error {}
 
-export function socialKey(raw = process.env.SOCIAL_ENC_KEY): Buffer {
-  if (!raw) throw new CryptoConfigError("SOCIAL_ENC_KEY não configurada.");
+/**
+ * Chave de 32 bytes. Usa SOCIAL_ENC_KEY (base64) se existir; senão deriva (SHA-256, com rótulo
+ * próprio) da STUDIO_ENCRYPTION_KEY que o Studio já usa — assim não há mais uma variável para configurar.
+ */
+export function socialKey(raw = process.env.SOCIAL_ENC_KEY, fallback = process.env.STUDIO_ENCRYPTION_KEY): Buffer {
+  if (!raw && fallback && fallback.length >= 32) return createHash("sha256").update(`bellman-social-v1:${fallback}`).digest();
+  if (!raw) throw new CryptoConfigError("Chave de cifra não configurada no servidor (STUDIO_ENCRYPTION_KEY).");
   const key = Buffer.from(raw, "base64");
   if (key.length !== 32) throw new CryptoConfigError("SOCIAL_ENC_KEY precisa ter 32 bytes em base64.");
   return key;

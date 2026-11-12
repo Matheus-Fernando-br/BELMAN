@@ -47,7 +47,7 @@ export async function liveDashboard(scopeIds: string[], slugOf: Map<string, stri
   if (failed.length) alerts.push({ tone: "bad", text: `${failed.length} post(s) com falha de publicação`, entity: slug(failed[0].entity_id) });
   const review = P.filter((p) => p.status === "review");
   if (review.length) alerts.push({ tone: "warn", text: `${review.length} post(s) aguardando revisão`, entity: slug(review[0].entity_id) });
-  if (jobs.data?.length) alerts.push({ tone: "bad", text: "Fila de redes sociais parada há mais de 15 min (worker fora do ar?)", entity: "" });
+  if (jobs.data?.length) alerts.push({ tone: "bad", text: "Automação das redes sociais parada há mais de 15 min", entity: "" });
   const critical = B.filter((b) => b.type === "bug" && b.severity === "critical");
   if (critical.length) alerts.push({ tone: "bad", text: `${critical.length} bug(s) crítico(s) em aberto`, entity: slug(critical[0].entity_id) });
   const lateTasks = (tasks.data ?? []).filter((t) => t.due_date && t.due_date < today);

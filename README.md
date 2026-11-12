@@ -73,43 +73,18 @@ O Studio lê métricas e pagamentos dos produtos por um canal **assinado e cifra
 
 ## Redes Sociais (`/studio/social`)
 
-Um workspace por produto (Obra Fácil, FINC e futuros), isolado: conta, marca, templates, fila, calendário, métricas e custo de IA.
+Por produto (Obra Fácil, FINC…), 4 abas:
 
-```
-web (Vercel)  ── server actions ──▶  Supabase (tabelas social_*, RLS por entidade)  ◀── fila ──  worker (Render, Docker)
- · cola token / conexão               studio_private.social_credentials (cifrado)               · Claude: só TEXTO estruturado
- · Tema → post, revisão               bucket privado social-media                                · Satori + resvg + sharp (imagens)
- · calendário, regras, publicados                                                               · Remotion + FFmpeg (vídeo)
-                                                                                                 · Piper (voz) · whisper.cpp (legendas)
-                                                                                                 · agendador 1/min: publicar, renovar
-                                                                                                   tokens, métricas, plano semanal
-```
+| Aba | Para quê |
+| --- | --- |
+| **Posts** | Criar um post agora (tema opcional), ver o que está para revisar, agendado e publicado (com alcance e curtidas). Abrir um post: editar legenda, hashtags e textos das imagens, mudar a data, aprovar, pedir para a IA refazer. |
+| **Calendário** | Mês/semana; arrastar um post para outro dia muda a data; “+” cria um post naquele dia. |
+| **Automático** | Liga/desliga, dias, horário, carrossel ou imagem única, e se você revisa antes (padrão) ou publica sozinho. Embaixo, o estilo da marca que a IA segue. |
+| **Conexão** | O token do Instagram (colar/trocar quando vencer; aviso 10 dias antes) e a chave da IA. Os dois ficam cifrados e nunca voltam para a tela. |
 
-- **Banco:** [`0009_social.sql`](web/supabase/migrations/0009_social.sql). Credenciais e app secrets ficam cifrados (AES-256-GCM, `SOCIAL_ENC_KEY`) no schema `studio_private`, sem acesso do navegador; o servidor e o worker usam funções restritas à service role. Auditoria sem segredos (`studio.audit_redacted`). O navegador não consegue marcar post como publicado nem aprovar em nome de outra pessoa.
-- **Código compartilhado:** [`shared/social`](shared/social) (cripto, cliente da Graph API, lint de legenda, regras de mídia, agendador) e [`shared/social-templates`](shared/social-templates) (templates de arte), usados pelo web e pelo worker.
-- **Worker:** [`worker/`](worker) (Node 22 + TypeScript via `tsx`, [`Dockerfile`](worker/Dockerfile)). Fila com `FOR UPDATE SKIP LOCKED` (`social_claim_jobs`), 1 job pesado + `WORKER_CONCURRENCY` leves, retry com backoff e erro legível no post.
-- **Só APIs oficiais da Meta.** Nada de curtir, seguir, comentar em perfis de terceiros, DM em massa, login ou scraping no instagram.com. Nome, bio, site e foto do perfil são somente leitura na API: o "Assistente de perfil" guia a troca manual e confere a cada 6 h.
-- **Revisão humana por padrão.** Publicar sem revisão só se for desligado explicitamente numa regra semanal.
-- **Custo de IA:** Claude escreve só o texto (modelo por workspace, padrão `claude-opus-5-5`, com fallback do servidor ativado e cache de prompt). Editar texto re-renderiza sem IA; lint local com no máximo 1 correção. Gasto mensal em Publicados (admin) e lançado no Financeiro todo dia 1 (IA + worker, com rateio por produto).
-- **Licença do Remotion:** gratuita para pessoas físicas e empresas com até 3 funcionários; acima disso, é preciso a licença de empresa (remotion.pro).
-- **Limites do plano grátis do Supabase:** arquivos de até 50 MB (vídeos enviados até 50 MB).
+**Como funciona (só imagens, sem servidor extra):** tudo roda na Vercel. A cada 2 minutos o Supabase (pg_cron + pg_net) chama `/api/studio/social/tick` com um token que só existe no Vault do Supabase; ações no Studio também disparam o processamento na hora. A fila (`social_jobs`) cuida de: escrever o texto (Claude, só texto, com lint local e no máximo 1 correção), desenhar as imagens (Satori + resvg + sharp, templates em [`shared/social-templates`](shared/social-templates), sem IA), publicar pela Graph API oficial (cota, espaçamento de 2 min, backoff), conferir/renovar o token todo dia e coletar métricas (24 h, 72 h, 7 dias, depois semanal até 30 dias). Posts automáticos são criados N dias antes do horário e, por padrão, só publicam depois de aprovados.
 
-| Onde | Variável | Descrição |
-| --- | --- | --- |
-| Vercel | `SOCIAL_ENC_KEY` | **Secreta.** 32 bytes em base64 (`openssl rand -base64 32`). A MESMA no worker. |
-| Worker | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Acesso ao banco (service role). |
-| Worker | `SOCIAL_ENC_KEY` | Igual à da Vercel. |
-| Worker | `ANTHROPIC_API_KEY` | Chave da API da Anthropic (geração de texto). |
-| Worker | `WORKER_CONCURRENCY` | Jobs leves em paralelo (padrão 3). |
-| Worker | `SOCIAL_VIDEO` | `1` liga Reels/vinhetas por Remotion (use o plano Standard). |
-| Worker | `TZ` | `America/Sao_Paulo`. |
-| Worker | `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID` | Opcional: alertas (token vencendo, falha de publicação) no mesmo bot do contato. |
-| Worker | `USD_BRL`, `WORKER_MONTHLY_USD` | Opcional: câmbio e custo mensal do worker para o lançamento no Financeiro. |
-
-**Checklist de teste com a conta real (Obra Fácil):**
-1. Configurações → Meta: App ID e App Secret do app "Bellman Studio".
-2. Redes Sociais → Obra Fácil → Conexão: cole o token (`EAA…` ou, melhor, de System User) → Conectar.
-3. Criar: tema → Gerar (texto → artes → pronto para revisão).
-4. Revisão: confira, edite se precisar, Aprovar → data e hora daqui a 5 min.
-5. Em até 1 min do horário, o post aparece como Publicado com o link.
-6. Métricas em 24 h (Publicados).
+- **Segurança:** token do Instagram e chave da IA cifrados (AES-256-GCM, chave derivada da `STUDIO_ENCRYPTION_KEY`) no schema `studio_private`, sem acesso do navegador; auditoria sem segredos. Só APIs oficiais da Meta: nada de curtir, seguir, comentar em perfis de terceiros, DM em massa ou login no instagram.com.
+- **Custo:** a IA cobra por uso (centavos de dólar por post); o gasto mensal vai para o Financeiro. Vercel e Supabase no plano grátis.
+- **Banco:** [`0009_social.sql`](web/supabase/migrations/0009_social.sql) e [`0010_social_simple.sql`](web/supabase/migrations/0010_social_simple.sql). Código: [`web/src/lib/social`](web/src/lib/social) e [`shared/social`](shared/social).
+- **Vídeo (Reels) fica para depois:** a versão com worker (Remotion, FFmpeg, voz e legendas) está guardada no branch `social-worker-video`.

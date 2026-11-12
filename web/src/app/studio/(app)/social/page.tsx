@@ -74,12 +74,12 @@ export default async function SocialHome() {
               </ul>
               {acc?.token_expires_at && acc.status !== "connected" && <p className="st-hint">Token vence em {dateTimeBR(acc.token_expires_at)}</p>}
               <div className="st-actions">
-                <Link className="st-btn" href={`/studio/social/${e.slug}/revisao`}>
+                <Link className="st-btn" href={`/studio/social/${e.slug}`}>
                   Abrir
                 </Link>
                 {!configured && (
-                  <Link className="st-btn" data-variant="ghost" href={`/studio/social/${e.slug}/marca`}>
-                    Configurar marca
+                  <Link className="st-btn" data-variant="ghost" href={`/studio/social/${e.slug}/automatico`}>
+                    Configurar
                   </Link>
                 )}
               </div>

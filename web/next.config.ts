@@ -40,6 +40,8 @@ const repoRoot = path.join(__dirname, "..");
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   turbopack: { root: repoRoot },
+  // renderização das artes das redes sociais (binários nativos, só no servidor)
+  serverExternalPackages: ["@resvg/resvg-js", "sharp"],
   outputFileTracingRoot: repoRoot,
   experimental: {
     // Comprovantes do Studio (até 4 MB; a Vercel limita o corpo da requisição a 4,5 MB) chegam por Server Action.

@@ -11,7 +11,8 @@ const ORDER = ["carousel", "post", "reel", "story", "youtube", "cover", "kicker"
 const sorted = (o: Record<string, J>) => Object.entries(o).sort(([a], [b]) => (ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99));
 
 /** Editor genérico do texto estruturado: cada campo de texto vira um input; listas de texto, linhas. */
-export function CopyEditor({ initial }: { initial: Record<string, J> }) {
+/** `initial` = só os blocos editáveis; `full` (opcional) = o restante do texto estruturado, preservado. */
+export function CopyEditor({ initial, full = {} }: { initial: Record<string, J>; full?: Record<string, J> }) {
   const [copy, setCopy] = useState<Record<string, J>>(initial);
   const set = (path: (string | number)[], value: J) => {
     setCopy((prev) => {
@@ -87,7 +88,7 @@ export function CopyEditor({ initial }: { initial: Record<string, J> }) {
   const clean = (v: J): J => (Array.isArray(v) ? (v.every((x) => typeof x === "string") ? (v as string[]).map((s) => s.trim()).filter(Boolean) : v.map(clean)) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, clean(x)])) : v);
   return (
     <>
-      <input type="hidden" name="copy" value={JSON.stringify(clean(copy))} />
+      <input type="hidden" name="copy" value={JSON.stringify({ ...full, ...(clean(copy) as Record<string, J>) })} />
       {sorted(copy).map(([k, v]) => render(v, [k], k))}
     </>
   );

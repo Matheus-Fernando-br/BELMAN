@@ -134,8 +134,9 @@ export type DebugInfo = {
 
 const epoch = (v?: number | null) => (v ? new Date(v * 1000) : null);
 
-export async function debugToken(token: string, app: MetaApp, fetchFn: Fetch = fetch): Promise<DebugInfo> {
-  if (!app.appId || !app.appSecret) throw new MetaError("Cadastre o App ID e o App Secret da Meta em Configurações → Meta.", 400);
+/** Sem app cadastrado, o próprio token se inspeciona (vale para o desenvolvedor do app). */
+export async function debugToken(token: string, app: MetaApp | null, fetchFn: Fetch = fetch): Promise<DebugInfo> {
+  const appToken = app?.appId && app.appSecret ? `${app.appId}|${app.appSecret}` : token;
   const r = await request<{
     data: {
       is_valid: boolean;
@@ -147,7 +148,7 @@ export async function debugToken(token: string, app: MetaApp, fetchFn: Fetch = f
       scopes?: string[];
       granular_scopes?: { scope: string; target_ids?: string[] }[];
     };
-  }>(fetchFn, `${FB_GRAPH}/${GRAPH_VERSION}/debug_token`, { params: { input_token: token, access_token: `${app.appId}|${app.appSecret}` } });
+  }>(fetchFn, `${FB_GRAPH}/${GRAPH_VERSION}/debug_token`, { params: { input_token: token, access_token: appToken } });
   const d = r.data;
   const igUserIds = [...new Set((d.granular_scopes ?? []).filter((g) => g.scope.startsWith("instagram")).flatMap((g) => g.target_ids ?? []))];
   return {
@@ -221,6 +222,15 @@ export type Profile = {
 export type ContainerStatus = "FINISHED" | "IN_PROGRESS" | "ERROR" | "EXPIRED" | "PUBLISHED";
 
 export const PUBLISH_SCOPES = ["instagram_business_content_publish", "instagram_content_publish"];
+
+/** Contas do Instagram ligadas às páginas do token (quando o debug não traz o id). */
+export async function instagramAccounts(token: string, fetchFn: Fetch = fetch) {
+  const r = await request<{ data: { instagram_business_account?: { id: string; username?: string } }[] }>(fetchFn, `${FB_GRAPH}/${GRAPH_VERSION}/me/accounts`, {
+    params: { fields: "instagram_business_account{id,username}", limit: 50 },
+    token,
+  });
+  return r.data.map((p) => p.instagram_business_account).filter((x): x is { id: string; username?: string } => Boolean(x?.id));
+}
 
 export class MetaClient {
   readonly base: string;

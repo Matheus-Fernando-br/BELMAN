@@ -24,7 +24,11 @@ describe("crypto (AES-256-GCM)", () => {
     expect(() => open(seal("t", key), randomBytes(32))).toThrow();
   });
   it("valida a chave", () => {
-    expect(() => socialKey(undefined)).toThrow(CryptoConfigError);
+    expect(() => socialKey(undefined, undefined)).toThrow(CryptoConfigError);
+    // sem SOCIAL_ENC_KEY, deriva da chave do Studio (determinística e diferente dela)
+    const a = socialKey(undefined, "x".repeat(40));
+    expect(a.length).toBe(32);
+    expect(a.equals(socialKey(undefined, "x".repeat(40)))).toBe(true);
     expect(() => socialKey(Buffer.alloc(16).toString("base64"))).toThrow(CryptoConfigError);
     expect(socialKey(key.toString("base64")).length).toBe(32);
   });

@@ -59,7 +59,7 @@ export default async function CalendarPage({ params, searchParams }: { params: P
       status: p.status,
       tone: statusTone(p.status),
       href: `/studio/social/${slug}/post/${p.id}`,
-      movable: ["approved", "scheduled"].includes(p.status),
+      movable: ["approved", "scheduled", "review"].includes(p.status),
     };
   });
   // slots vazios das regras viram "criar post aqui"
@@ -91,7 +91,7 @@ export default async function CalendarPage({ params, searchParams }: { params: P
           Semana
         </Link>
         <span className="st-hint" style={{ marginLeft: "auto" }}>
-          Arraste um post aprovado para outro dia para reagendar. Dias com regra e sem post mostram “+”.
+          Arraste um post para outro dia para mudar a data. Clique em “+” para criar um post naquele dia.
         </span>
       </div>
       <DragCalendar
@@ -105,12 +105,12 @@ export default async function CalendarPage({ params, searchParams }: { params: P
             title: `Livre · ${formatLabel(s.format)}`,
             status: "slot",
             tone: "neutral",
-            href: `/studio/social/${slug}/criar?dia=${s.day}`,
+            href: `/studio/social/${slug}?dia=${s.day}`,
             movable: false,
           })),
         ]}
         canWrite={ctx.canWrite}
-        newHref={`/studio/social/${slug}/criar`}
+        newHref={`/studio/social/${slug}`}
         onMove={async (id: string, day: string, time: string) => {
           "use server";
           return reschedule(slug, id, zonedTime(day, time, TZ).toISOString());

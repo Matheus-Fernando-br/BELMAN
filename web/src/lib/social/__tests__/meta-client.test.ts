@@ -58,8 +58,11 @@ describe("debugToken", () => {
     expect(calls[0].url.hostname).toBe("graph.facebook.com");
     expect(calls[0].url.pathname).toBe("/v23.0/debug_token");
   });
-  it("exige app cadastrado", async () => {
-    await expect(debugToken("EAA", {}, mockFetch([]).fn)).rejects.toBeInstanceOf(MetaError);
+  it("sem app cadastrado, o token se inspeciona", async () => {
+    const { fn, calls } = mockFetch([json({ data: { is_valid: true, expires_at: 1900000000, scopes: [], granular_scopes: [] } })]);
+    const d = await debugToken("EAAself", null, fn);
+    expect(calls[0].url.searchParams.get("access_token")).toBe("EAAself");
+    expect(d.expiresAt?.getTime()).toBe(1900000000 * 1000);
   });
   it("não vaza segredo na mensagem de erro", async () => {
     const { fn } = mockFetch([json({ error: { code: 190, message: "bad access_token=EAAsecret&x=1" } }, 400)]);
