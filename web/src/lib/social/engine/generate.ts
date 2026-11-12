@@ -2,6 +2,7 @@ import "server-only";
 import { generatePost, type FormatKey } from "./ai";
 import { enqueue, sb, setPost } from "./db";
 import { loadBrand, logUsage, type Job } from "./brand";
+import { anthropicKey } from "./secrets";
 
 /** Tema (ou tema livre) → texto estruturado (IA) → lint → no máximo 1 correção → artes. */
 export async function generateCopy(job: Job) {
@@ -18,6 +19,13 @@ export async function generateCopy(job: Job) {
     .order("created_at", { ascending: false })
     .limit(15);
   const redo = job.payload.purpose === "redo";
+  // Sem chave da Anthropic: o post fica esperando a tarefa agendada do Claude (plano do usuário),
+  // que escreve os textos e devolve para cá desenhar as imagens. Sem custo por post.
+  if (!(await anthropicKey())) {
+    const copy = { ...(post.copy ?? {}), ...(redo ? { _redo: String(job.payload.instruction ?? "") } : {}) };
+    await setPost(job.post_id, { status: "draft", copy, error: null });
+    return { waiting: "claude" };
+  }
   const g = await generatePost(profile, {
     theme: post.theme || "Escolha você um tema novo, específico e útil para o público, diferente dos recentes.",
     format: post.format as FormatKey,

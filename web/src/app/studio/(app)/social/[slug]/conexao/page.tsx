@@ -78,14 +78,15 @@ export default async function ConnectionPage({ params }: { params: Promise<{ slu
 
       <article className="st-card">
         <div className="st-card-head">
-          <h2>2. Chave da IA</h2>
+          <h2>2. Chave da IA (opcional)</h2>
           <span className="st-status" data-tone={ai ? "ok" : "neutral"}>
-            {ai ? `Salva (${ai.hint})` : "Não configurada"}
+            {ai ? `Salva (${ai.hint})` : "Usando o seu plano do Claude"}
           </span>
         </div>
         <p className="st-hint">
-          A IA (Claude, da Anthropic) escreve os textos dos posts. Crie a chave em console.anthropic.com → API Keys e cole aqui. Cada post custa poucos centavos de dólar; o gasto aparece
-          no Financeiro.
+          Sem chave: o Claude do seu plano escreve os posts de hora em hora (das 7h às 23h), sem custo por post. Não precisa fazer nada aqui.
+          <br />
+          Com chave da Anthropic (console.anthropic.com → API Keys): o post fica pronto na hora, mas cada um custa alguns centavos de dólar.
         </p>
         <StateForm action={saveAiKey.bind(null, slug)} submit={ai ? "Trocar chave" : "Salvar chave"} pending="Salvando…">
           <div className="st-field">

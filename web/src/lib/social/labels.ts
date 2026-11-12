@@ -18,7 +18,7 @@ export const POST_TYPES = [
 ] as const;
 
 export const STATUS = [
-  ["draft", "Rascunho", "neutral"],
+  ["draft", "Aguardando o Claude escrever", "warn"],
   ["generating", "Gerando texto", "warn"],
   ["rendering", "Renderizando", "warn"],
   ["review", "Aguardando revisão", "warn"],

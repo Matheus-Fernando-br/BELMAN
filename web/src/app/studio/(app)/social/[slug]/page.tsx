@@ -39,22 +39,22 @@ export default async function PostsPage({ params, searchParams }: { params: Prom
   const metricOf = new Map<string, { reach: number | null; likes: number | null; saves: number | null }>();
   for (const m of metrics ?? []) if (!metricOf.has(m.post_id)) metricOf.set(m.post_id, m);
   const hasKey = ((aiKey ?? []) as { name: string }[]).some((s) => s.name === "anthropic_api_key");
+  const writer = hasKey ? "O post fica pronto em cerca de 1 minuto." : "O Claude do seu plano escreve o texto em até 1 hora (das 7h às 23h), sem custo por post.";
   const connected = acc && acc.status !== "disconnected";
   const automatic = Boolean(rules?.[0]?.auto_generate);
-  const busy = posts.some((p) => BUSY.includes(p.status));
+  const busy = posts.some((p) => BUSY.includes(p.status) && p.status !== "draft");
   const b = `/studio/social/${slug}`;
 
   return (
     <>
       <AutoRefresh active={busy} />
-      {(!connected || !hasKey) && (
+      {!connected && (
         <article className="st-card" style={{ marginTop: "1rem" }}>
           <h2>Falta pouco para começar</h2>
           <ol style={{ margin: 0, paddingLeft: "1.2rem", lineHeight: 1.9 }}>
             <li>
               {connected ? "✓ Instagram conectado" : <Link href={`${b}/conexao`}>Colar o token do Instagram</Link>}
             </li>
-            <li>{hasKey ? "✓ Chave da IA salva" : <Link href={`${b}/conexao`}>Colar a chave da IA (Anthropic)</Link>}</li>
             <li>
               {automatic ? "✓ Automático ligado" : <Link href={`${b}/automatico`}>Escolher dias e horário do automático</Link>} <span className="st-hint">(opcional)</span>
             </li>
@@ -67,6 +67,7 @@ export default async function PostsPage({ params, searchParams }: { params: Prom
           <summary style={{ cursor: "pointer", fontWeight: 700 }}>+ Criar um post agora</summary>
           <div style={{ marginTop: "1rem" }}>
             <StateForm action={createPost.bind(null, slug)} submit="Criar post" pending="Criando…">
+              <p className="st-hint" style={{ margin: 0 }}>{writer}</p>
               <div className="st-field">
                 <label htmlFor="theme">Sobre o que? (opcional)</label>
                 <input id="theme" name="theme" className="st-input" placeholder="Deixe em branco e a IA escolhe um tema" />
@@ -115,7 +116,7 @@ export default async function PostsPage({ params, searchParams }: { params: Prom
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={urls.get(src)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
-                  <span style={{ color: "#bbb", fontSize: 13 }}>{BUSY.includes(p.status) ? "Preparando…" : "Sem imagem"}</span>
+                  <span style={{ color: "#bbb", fontSize: 13 }}>{p.status === "draft" ? "Na fila do Claude" : BUSY.includes(p.status) ? "Preparando…" : "Sem imagem"}</span>
                 )}
               </div>
               <div className="st-actions" style={{ gap: "0.4rem" }}>

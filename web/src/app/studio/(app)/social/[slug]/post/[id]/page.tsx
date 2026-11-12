@@ -37,7 +37,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
   return (
     <>
-      <AutoRefresh active={busy} />
+      <AutoRefresh active={busy} every={post.status === "draft" ? 30000 : 4000} />
       <div className="st-actions" style={{ margin: "1rem 0" }}>
         <Link href={`/studio/social/${slug}`}>← Posts</Link>
         <span className="st-status" data-tone={statusTone(post.status)}>
@@ -54,8 +54,14 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
       {busy && (
         <p className="st-banner" data-tone="info">
-          {post.status === "generating" ? "A IA está escrevendo o post…" : post.status === "rendering" ? "Desenhando as imagens…" : "Publicando no Instagram…"} Esta página atualiza
-          sozinha.
+          {post.status === "draft"
+            ? "Na fila do Claude: o texto fica pronto em até 1 hora (das 7h às 23h) e as imagens logo depois."
+            : post.status === "generating"
+              ? "Preparando o post…"
+              : post.status === "rendering"
+                ? "Desenhando as imagens…"
+                : "Publicando no Instagram…"}{" "}
+          Esta página atualiza sozinha.
         </p>
       )}
       {post.status === "failed" && (
