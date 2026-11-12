@@ -65,10 +65,11 @@ export default async function CalendarPage({ params, searchParams }: { params: P
   // slots vazios das regras viram "criar post aqui"
   const empty = slotsBetween((rules ?? []) as Rule[], from, to)
     .map((s) => ({ ...local(s.at.toISOString()), format: s.rule.format }))
-    .filter((s) => !items.some((p) => p.day === s.day));
+    .filter((s) => s.day >= todayStr && !items.some((p) => p.day === s.day));
   const prev = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7);
   const next = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 7);
-  const name = new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+  const rawName = new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+  const name = rawName.charAt(0).toUpperCase() + rawName.slice(1);
   return (
     <>
       <div className="st-actions" style={{ margin: "1rem 0" }}>
@@ -77,7 +78,7 @@ export default async function CalendarPage({ params, searchParams }: { params: P
             <Link className="st-btn" data-variant="ghost" href={`?mes=${prev}`} aria-label="Mês anterior">
               ‹
             </Link>
-            <strong style={{ textTransform: "capitalize" }}>{name}</strong>
+            <strong>{name}</strong>
             <Link className="st-btn" data-variant="ghost" href={`?mes=${next}`} aria-label="Próximo mês">
               ›
             </Link>
