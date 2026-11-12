@@ -50,7 +50,7 @@ export default async function ConnectionPage({ params }: { params: Promise<{ slu
             <div className="st-field" style={{ marginTop: "0.5rem" }}>
               <label htmlFor="ig_id">ID da conta do Instagram</label>
               <input id="ig_id" name="ig_id" inputMode="numeric" className="st-input" defaultValue={acc?.external_id ?? (slug === "obra-facil" ? "17841471283814167" : "")} />
-              <span className="st-hint">Só se a conexão pedir. Para a Obra Fácil já vem preenchido.</span>
+              <span className="st-hint">Só se a conexão pedir. Para a Obra Fácil já vem preenchido. Onde achar: Meta Business Suite → Configurações → Contas do Instagram → a conta → “ID”.</span>
             </div>
           </details>
         </StateForm>
