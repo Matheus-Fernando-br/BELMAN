@@ -61,3 +61,8 @@ export function br(date?: string | null) {
 export function daysAgoISO(days: number) {
   return new Date(Date.now() - days * 864e5).toISOString();
 }
+
+/** Dias inteiros até uma data (fora do render). */
+export function daysUntil(iso: string) {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 864e5);
+}

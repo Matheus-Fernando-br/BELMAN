@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const apiOrigin = (() => {
@@ -33,8 +34,13 @@ const csp = [
   "object-src 'none'",
 ].join("; ");
 
+// O módulo Redes Sociais usa código em ../shared (compartilhado com o worker).
+const repoRoot = path.join(__dirname, "..");
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  turbopack: { root: repoRoot },
+  outputFileTracingRoot: repoRoot,
   experimental: {
     // Comprovantes do Studio (até 4 MB; a Vercel limita o corpo da requisição a 4,5 MB) chegam por Server Action.
     serverActions: { bodySizeLimit: "4.4mb" },

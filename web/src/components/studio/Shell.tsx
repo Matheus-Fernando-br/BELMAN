@@ -15,8 +15,8 @@ const NAV: NavItem[] = [
   { href: "/studio/financeiro", label: "Financeiro", icon: "finance" },
   { href: "/studio/operacoes", label: "Operações", icon: "ops" },
   { href: "/studio/vendas", label: "Vendas", icon: "sales" },
+  { href: "/studio/social", label: "Redes Sociais", icon: "social" },
   { href: "/studio/desenvolvimento", label: "Desenvolvimento", icon: "dev" },
-  { href: "/studio/redes-sociais", label: "Redes sociais", icon: "social" },
 ];
 
 export type ShellProps = {
