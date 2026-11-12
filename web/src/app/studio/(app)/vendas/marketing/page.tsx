@@ -3,7 +3,7 @@ import Link from "next/link";
 import { QuickSelect, RecordForm } from "@/components/studio/RecordForm";
 import { formatCents } from "@/lib/studio/finance-math";
 import { CAMPAIGN_CHANNEL, label } from "@/lib/studio/records";
-import { br, requireScope } from "@/lib/studio/scope";
+import { br, daysAgoISO, requireScope } from "@/lib/studio/scope";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Marketing e campanhas" };
@@ -12,10 +12,17 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
   const params = await searchParams;
   const ctx = await requireScope(params.e);
   const supabase = await createClient();
-  const [{ data: campaigns }, { data: leads }] = await Promise.all([
+  const [{ data: campaigns }, { data: leads }, { data: social }] = await Promise.all([
     supabase.from("campaigns").select("*").in("entity_id", ctx.scopeIds).order("start_date", { ascending: false }),
     supabase.from("leads").select("campaign_id,stage").in("entity_id", ctx.scopeIds).not("campaign_id", "is", null),
+    supabase.from("social_posts").select("format,published_at").in("entity_id", ctx.scopeIds).eq("status", "published").gte("published_at", daysAgoISO(30)),
   ]);
+  const byChannel = [
+    ["Instagram · feed", (social ?? []).filter((p) => ["post", "carousel"].includes(p.format)).length],
+    ["Instagram · Reels", (social ?? []).filter((p) => p.format === "reel").length],
+    ["Instagram · Stories", (social ?? []).filter((p) => p.format === "story").length],
+    ["YouTube", (social ?? []).filter((p) => p.format.startsWith("youtube")).length],
+  ] as const;
   const ent = new Map(ctx.entities.map((x) => [x.id, x.name]));
   const editing = (campaigns ?? []).find((c) => c.id === params.editar);
   return (
@@ -26,10 +33,19 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
           <h1>Marketing e campanhas</h1>
           <p>Campanhas, tráfego pago, parcerias e indicações, com os leads e vendas de cada uma.</p>
         </div>
-        <Link className="st-btn" href="/studio/redes-sociais">
-          Abrir Redes sociais →
+        <Link className="st-btn" href="/studio/social">
+          Abrir Redes Sociais →
         </Link>
       </div>
+      <dl className="st-kpis" aria-label="Posts publicados nos últimos 30 dias, por canal">
+        {byChannel.map(([name, n]) => (
+          <div key={name} className="st-kpi">
+            <dt>{name}</dt>
+            <dd>{n}</dd>
+            <span className="st-delta">publicados em 30 dias</span>
+          </div>
+        ))}
+      </dl>
       <div className="st-grid" data-cols="2-1">
         <div className="st-table-wrap">
           <table className="st-table">

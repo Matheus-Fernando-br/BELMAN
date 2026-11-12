@@ -24,3 +24,39 @@ services:
         sync: false
       - key: CONTACT_RELAY_URL
         sync: false
+
+  # Worker do módulo Redes Sociais (fila de jobs, render, IA de texto, publicação, agendador).
+  # Starter para imagens; Standard ao ligar o vídeo (SOCIAL_VIDEO=1: Chromium + FFmpeg).
+  # O build usa a raiz do repositório como contexto porque precisa de shared/ e worker/.
+  - type: worker
+    name: bellman-social-worker
+    runtime: docker
+    plan: starter
+    region: oregon
+    branch: main
+    dockerContext: .
+    dockerfilePath: ./worker/Dockerfile
+    buildFilter:
+      paths:
+        - worker/**
+        - shared/**
+    autoDeploy: true
+    envVars:
+      - key: TZ
+        value: America/Sao_Paulo
+      - key: WORKER_CONCURRENCY
+        value: "3"
+      - key: SOCIAL_VIDEO
+        value: "0"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SOCIAL_ENC_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false

@@ -1,0 +1,34 @@
+{
+  "name": "bellman-social-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Worker do módulo Redes Sociais do Bellman Studio: fila de jobs, render (Satori/resvg/sharp, Remotion/FFmpeg), IA de texto (Claude), publicação na Meta e agendador.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "once": "tsx src/index.ts --once",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0",
+    "@remotion/bundler": "4.0.543",
+    "@remotion/renderer": "4.0.543",
+    "@resvg/resvg-js": "2.6.2",
+    "@supabase/supabase-js": "2.119.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.543",
+    "satori": "0.63.2",
+    "sharp": "0.35.5",
+    "tsx": "4.23.15",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
+  }
+}

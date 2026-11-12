@@ -14,3 +14,6 @@ coverage/
 .vercel/
 .DS_Store
 *.log
+
+# certificado local usado só para testar o build do worker nesta máquina
+.local-ca.crt

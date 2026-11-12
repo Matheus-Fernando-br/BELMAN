@@ -6,6 +6,9 @@ import { COPY_LABELS } from "@shared/social/copy";
 type J = string | number | boolean | null | J[] | { [k: string]: J };
 
 const lbl = (k: string) => COPY_LABELS[k] ?? k;
+// ordem de leitura (o banco devolve as chaves do JSON em outra ordem)
+const ORDER = ["carousel", "post", "reel", "story", "youtube", "cover", "kicker", "title", "subtitle", "hook", "number", "body", "items", "on_screen_text", "voiceover", "seconds", "text", "sticker_suggestion", "slides", "beats", "frames", "recap", "description", "chapters", "time", "label", "tags", "thumbnail_text", "script", "cta", "first_line", "keywords"];
+const sorted = (o: Record<string, J>) => Object.entries(o).sort(([a], [b]) => (ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99));
 
 /** Editor genérico do texto estruturado: cada campo de texto vira um input; listas de texto, linhas. */
 export function CopyEditor({ initial }: { initial: Record<string, J> }) {
@@ -66,7 +69,7 @@ export function CopyEditor({ initial }: { initial: Record<string, J> }) {
                 {i + 1}. {typeof item === "object" && item && !Array.isArray(item) ? String((item as Record<string, J>).title ?? (item as Record<string, J>).on_screen_text ?? (item as Record<string, J>).text ?? (item as Record<string, J>).label ?? "") : ""}
               </summary>
               <div className="st-form" style={{ marginTop: "0.5rem" }}>
-                {typeof item === "object" && item && !Array.isArray(item) ? Object.entries(item).map(([k, v]) => render(v, [...path, i, k], k)) : render(item, [...path, i], key)}
+                {typeof item === "object" && item && !Array.isArray(item) ? sorted(item as Record<string, J>).map(([k, v]) => render(v, [...path, i, k], k)) : render(item, [...path, i], key)}
               </div>
             </details>
           ))}
@@ -76,7 +79,7 @@ export function CopyEditor({ initial }: { initial: Record<string, J> }) {
     return (
       <fieldset key={id} className="st-form" style={{ border: 0, padding: 0, margin: 0 }}>
         <legend style={{ fontWeight: 700 }}>{lbl(key)}</legend>
-        {Object.entries(value).map(([k, v]) => render(v, [...path, k], k))}
+        {sorted(value as Record<string, J>).map(([k, v]) => render(v, [...path, k], k))}
       </fieldset>
     );
   };
@@ -85,7 +88,7 @@ export function CopyEditor({ initial }: { initial: Record<string, J> }) {
   return (
     <>
       <input type="hidden" name="copy" value={JSON.stringify(clean(copy))} />
-      {Object.entries(copy).map(([k, v]) => render(v, [k], k))}
+      {sorted(copy).map(([k, v]) => render(v, [k], k))}
     </>
   );
 }

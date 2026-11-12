@@ -81,7 +81,7 @@ export function nextFreeSlot(rules: Rule[], taken: Date[], now: Date, format?: s
 export type QueuePost = { id: string; status: string; scheduled_at: string | null; require_review: boolean; approved_at: string | null; account_id: string | null };
 
 /** Posts que podem publicar agora: aprovados/agendados com horário até agora + 2 min. Nunca sem aprovação quando a revisão é exigida. */
-export function duePosts(posts: QueuePost[], now: Date, leadMs = 2 * 60_000) {
+export function duePosts<T extends QueuePost>(posts: T[], now: Date, leadMs = 2 * 60_000): T[] {
   return posts
     .filter((p) => (p.status === "approved" || p.status === "scheduled") && p.scheduled_at && new Date(p.scheduled_at).getTime() <= now.getTime() + leadMs)
     .filter((p) => !p.require_review || Boolean(p.approved_at))

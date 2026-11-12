@@ -5,6 +5,7 @@ import { Icon } from "@/components/studio/Icon";
 import { CONSOLIDATED, filterOptions, resolveFilter } from "@/lib/studio/filter";
 import { cashToday, loadAllocated, loadTransactions, todayISO } from "@/lib/studio/finance";
 import { addMonths, cashFlow, lastDayOfMonth, monthKey, monthLabel, monthsBetween } from "@/lib/studio/finance-math";
+import { liveDashboard } from "@/lib/studio/dashboard-live";
 import { sampleDashboard } from "@/lib/studio/sample-data";
 import { requireStudio, type Entity } from "@/lib/studio/session";
 import { createClient } from "@/lib/supabase/server";
@@ -43,7 +44,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const scopeEntities = ctx.visible.filter((e) => scope.includes(e.slug));
   const scopeIds = scopeEntities.map((e) => e.id);
 
-  // Financeiro com dados reais (Fase 1). Clientes, MRR, vendas, tarefas e desenvolvimento seguem de exemplo.
+  // Tarefas, funil, desenvolvimento, entregas, conteúdo e alertas: dados reais (Fases 2 a 5).
+  const live = await liveDashboard(scopeIds, new Map(ctx.entities.map((e) => [e.id, e.slug])));
+  Object.assign(data, { funnel: live.funnel, conversion: live.conversion, tasks: live.tasks, features: live.features, bugs: live.bugs, deliveries: live.deliveries, content: live.content });
+  data.alerts = live.alerts;
+
+  // Financeiro com dados reais (Fase 1).
   let realAlerts: { tone: "bad" | "warn"; text: string; entity: string }[] = [];
   if (ctx.canSeeFinance && scopeIds.length) {
     const today = todayISO();
@@ -89,7 +95,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       ...(overdueOut.length ? [{ tone: "bad" as const, text: `${overdueOut.length} conta(s) a pagar em atraso`, entity: overdueOut[0].entity_slug }] : []),
       ...dueSoon.map((t) => ({ tone: "warn" as const, text: `${t.description} vence em ${t.due_date.split("-").reverse().slice(0, 2).join("/")}`, entity: t.entity_slug })),
     ];
-    data.alerts = [...realAlerts, ...data.alerts.filter((a) => !/pagamento|vence|Conta do/i.test(a.text))];
+    data.alerts = [...realAlerts, ...data.alerts];
   }
 
   // Clientes e MRR reais dos produtos integrados (canal assinado e cifrado).
@@ -160,12 +166,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <span>
           {ctx.canSeeFinance ? (
             <>
-              <strong>Receitas, despesas, resultado e caixa são reais</strong> (Financeiro). Clientes, MRR, vendas, tarefas,
-              desenvolvimento e conteúdo ainda são <strong>dados de exemplo</strong> até as Fases 2 e 3.
+              <strong>Todos os números são reais</strong>: Financeiro, produtos integrados, Vendas, Operações, Desenvolvimento e Redes
+              Sociais. Produtos ainda sem integração aparecem como “em breve”.
             </>
           ) : (
             <>
-              <strong>Dados de exemplo.</strong> Clientes, vendas, tarefas e desenvolvimento entram nas Fases 2 e 3.
+              <strong>Dados reais</strong> das áreas que você pode ver. Valores financeiros são restritos ao Sócio/Admin.
             </>
           )}
         </span>
@@ -295,7 +301,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <article className="st-card">
             <div className="st-card-head">
               <h2>Desempenho comercial</h2>
-              <span>exemplo · conversão {(data.conversion * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span>
+              <span>conversão {(data.conversion * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span>
             </div>
             <div className="st-funnel">
               {data.funnel.map((f) => (

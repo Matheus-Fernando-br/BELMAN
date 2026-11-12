@@ -63,3 +63,53 @@ O Studio lê métricas e pagamentos dos produtos por um canal **assinado e cifra
 - Sincroniza todo dia às 6h (Vercel Cron → `/api/studio/sync`, protegido por `CRON_SECRET`) e pelo botão "Sincronizar agora" na página do produto.
 - Pagamentos aprovados viram receita realizada no Financeiro (idempotente por `external_ref`; estornos cancelam o lançamento).
 - Segredos por produto: `STUDIO_SECRET_<SLUG>` (ex.: `STUDIO_SECRET_OBRA_FACIL`), só na Vercel, marcados como *Sensitive*.
+
+### Operações, Desenvolvimento e Vendas (Fases 2 e 3)
+
+- **Operações** (`/studio/operacoes`): tarefas (kanban/lista), clientes, processos de onboarding por produto, reuniões.
+- **Desenvolvimento** (`/studio/desenvolvimento`): backlog com anexos, versões com checklist de QA, projetos, infraestrutura e formulários públicos de feedback (`/feedback/<token>`, com anti-spam).
+- **Vendas** (`/studio/vendas`): CRM/funil, contratos e indicadores (conversão, MRR adquirido, ticket, churn, LTV, CAC). "Concluir venda" cria cliente, contrato, contas a receber e onboarding de uma vez (`studio_win_lead`).
+- Migrações [`0005`](web/supabase/migrations/0005_operations_dev.sql), [`0006`](web/supabase/migrations/0006_sales.sql) e [`0008`](web/supabase/migrations/0008_contract_cancel.sql).
+
+## Redes Sociais (`/studio/social`)
+
+Um workspace por produto (Obra Fácil, FINC e futuros), isolado: conta, marca, templates, fila, calendário, métricas e custo de IA.
+
+```
+web (Vercel)  ── server actions ──▶  Supabase (tabelas social_*, RLS por entidade)  ◀── fila ──  worker (Render, Docker)
+ · cola token / conexão               studio_private.social_credentials (cifrado)               · Claude: só TEXTO estruturado
+ · Tema → post, revisão               bucket privado social-media                                · Satori + resvg + sharp (imagens)
+ · calendário, regras, publicados                                                               · Remotion + FFmpeg (vídeo)
+                                                                                                 · Piper (voz) · whisper.cpp (legendas)
+                                                                                                 · agendador 1/min: publicar, renovar
+                                                                                                   tokens, métricas, plano semanal
+```
+
+- **Banco:** [`0009_social.sql`](web/supabase/migrations/0009_social.sql). Credenciais e app secrets ficam cifrados (AES-256-GCM, `SOCIAL_ENC_KEY`) no schema `studio_private`, sem acesso do navegador; o servidor e o worker usam funções restritas à service role. Auditoria sem segredos (`studio.audit_redacted`). O navegador não consegue marcar post como publicado nem aprovar em nome de outra pessoa.
+- **Código compartilhado:** [`shared/social`](shared/social) (cripto, cliente da Graph API, lint de legenda, regras de mídia, agendador) e [`shared/social-templates`](shared/social-templates) (templates de arte), usados pelo web e pelo worker.
+- **Worker:** [`worker/`](worker) (Node 22 + TypeScript via `tsx`, [`Dockerfile`](worker/Dockerfile)). Fila com `FOR UPDATE SKIP LOCKED` (`social_claim_jobs`), 1 job pesado + `WORKER_CONCURRENCY` leves, retry com backoff e erro legível no post.
+- **Só APIs oficiais da Meta.** Nada de curtir, seguir, comentar em perfis de terceiros, DM em massa, login ou scraping no instagram.com. Nome, bio, site e foto do perfil são somente leitura na API: o "Assistente de perfil" guia a troca manual e confere a cada 6 h.
+- **Revisão humana por padrão.** Publicar sem revisão só se for desligado explicitamente numa regra semanal.
+- **Custo de IA:** Claude escreve só o texto (modelo por workspace, padrão `claude-opus-5-5`, com fallback do servidor ativado e cache de prompt). Editar texto re-renderiza sem IA; lint local com no máximo 1 correção. Gasto mensal em Publicados (admin) e lançado no Financeiro todo dia 1 (IA + worker, com rateio por produto).
+- **Licença do Remotion:** gratuita para pessoas físicas e empresas com até 3 funcionários; acima disso, é preciso a licença de empresa (remotion.pro).
+- **Limites do plano grátis do Supabase:** arquivos de até 50 MB (vídeos enviados até 50 MB).
+
+| Onde | Variável | Descrição |
+| --- | --- | --- |
+| Vercel | `SOCIAL_ENC_KEY` | **Secreta.** 32 bytes em base64 (`openssl rand -base64 32`). A MESMA no worker. |
+| Worker | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Acesso ao banco (service role). |
+| Worker | `SOCIAL_ENC_KEY` | Igual à da Vercel. |
+| Worker | `ANTHROPIC_API_KEY` | Chave da API da Anthropic (geração de texto). |
+| Worker | `WORKER_CONCURRENCY` | Jobs leves em paralelo (padrão 3). |
+| Worker | `SOCIAL_VIDEO` | `1` liga Reels/vinhetas por Remotion (use o plano Standard). |
+| Worker | `TZ` | `America/Sao_Paulo`. |
+| Worker | `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID` | Opcional: alertas (token vencendo, falha de publicação) no mesmo bot do contato. |
+| Worker | `USD_BRL`, `WORKER_MONTHLY_USD` | Opcional: câmbio e custo mensal do worker para o lançamento no Financeiro. |
+
+**Checklist de teste com a conta real (Obra Fácil):**
+1. Configurações → Meta: App ID e App Secret do app "Bellman Studio".
+2. Redes Sociais → Obra Fácil → Conexão: cole o token (`EAA…` ou, melhor, de System User) → Conectar.
+3. Criar: tema → Gerar (texto → artes → pronto para revisão).
+4. Revisão: confira, edite se precisar, Aprovar → data e hora daqui a 5 min.
+5. Em até 1 min do horário, o post aparece como Publicado com o link.
+6. Métricas em 24 h (Publicados).
