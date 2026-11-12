@@ -84,7 +84,7 @@ export type ConnectResult = { username: string; kind: TokenKind; expiresAt: Date
  * "Cole o token" (Sócio/Admin): confere na Meta (validade, permissões e conta do Instagram),
  * lê o perfil e guarda o token cifrado. Não precisa cadastrar app da Meta.
  */
-export async function connectInstagram(entity: Entity, rawToken: string, actor: string): Promise<ConnectResult> {
+export async function connectInstagram(entity: Entity, rawToken: string, actor: string, igIdHint: string | null = null): Promise<ConnectResult> {
   const token = rawToken.trim().replace(/^Bearer\s+/i, "");
   const detected = detectTokenKind(token);
   if (!detected) throw new Error('Esse não parece um token da Meta. Ele começa com "EAA" ou "IG".');
@@ -98,19 +98,21 @@ export async function connectInstagram(entity: Entity, rawToken: string, actor: 
   let igUserId: string | null = null;
 
   if (detected === "fb_user") {
-    const first = await debugToken(token, app);
-    if (!first.isValid) throw new Error("A Meta diz que este token não vale mais (vencido ou revogado). Gere outro.");
-    if (first.type === "SYSTEM_USER" || !first.expiresAt) kind = "fb_system_user";
-    else if (app?.appId && app.appSecret) {
+    // A inspeção (debug_token) só funciona com app cadastrado ou para o dono do app.
+    // Se não der, seguimos usando o próprio token (validade estimada em 60 dias).
+    const first = await debugToken(token, app).catch(() => null);
+    if (first && !first.isValid) throw new Error("A Meta diz que este token não vale mais (vencido ou revogado). Gere outro.");
+    if (first && (first.type === "SYSTEM_USER" || !first.expiresAt)) kind = "fb_system_user";
+    else if (first && app?.appId && app.appSecret) {
       const ll = await exchangeForLongLived(token, "fb_user", app).catch(() => null);
       if (ll) longToken = ll.token;
     }
-    const info = longToken === token ? first : await debugToken(longToken, app);
-    expiresAt = info.expiresAt;
-    dataAccessExpiresAt = info.dataAccessExpiresAt;
-    scopes = info.scopes;
-    igUserId = info.igUserIds[0] ?? (await instagramAccounts(longToken).catch(() => []))[0]?.id ?? null;
-    if (!igUserId) throw new Error("O token não dá acesso a nenhuma conta do Instagram. Gere de novo marcando a conta e as permissões do Instagram.");
+    const info = first && longToken !== token ? await debugToken(longToken, app).catch(() => first) : first;
+    expiresAt = info ? info.expiresAt : new Date(Date.now() + 59 * 864e5);
+    dataAccessExpiresAt = info?.dataAccessExpiresAt ?? null;
+    scopes = info?.scopes ?? [];
+    igUserId = info?.igUserIds[0] ?? igIdHint ?? (await instagramAccounts(longToken).catch(() => []))[0]?.id ?? null;
+    if (!igUserId) throw new Error("Não achei a conta do Instagram neste token. Informe o ID da conta do Instagram em “Opções avançadas” e tente de novo.");
   } else {
     if (app?.igAppSecret) {
       const ll = await exchangeForLongLived(token, "ig_user", app).catch(() => null);
@@ -125,7 +127,11 @@ export async function connectInstagram(entity: Entity, rawToken: string, actor: 
     scopes = ["instagram_business_basic", "instagram_business_content_publish"];
   }
 
-  const profile = await new MetaClient(longToken, kind, igUserId).getProfile();
+  const profile = await new MetaClient(longToken, kind, igUserId).getProfile().catch((e) => {
+    if (e instanceof MetaError && e.tokenInvalid) throw new Error("A Meta recusou o token (vencido ou revogado). Gere outro e cole aqui.");
+    if (e instanceof MetaError) throw new Error(`A Meta não liberou a conta ${igUserId} com este token. Confira o ID da conta e se o token tem as permissões do Instagram. (${e.message})`);
+    throw e;
+  });
   const a = admin();
   const { data: acc, error } = await a
     .from("social_accounts")

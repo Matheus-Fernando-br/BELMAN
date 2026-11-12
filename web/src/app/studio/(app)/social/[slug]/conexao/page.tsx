@@ -43,6 +43,16 @@ export default async function ConnectionPage({ params }: { params: Promise<{ slu
             <input id="token" name="token" type="password" autoComplete="off" spellCheck={false} className="st-input" placeholder="EAA…" />
             <span className="st-hint">Fica guardado cifrado e nunca aparece de novo na tela.</span>
           </div>
+          <details>
+            <summary className="st-hint" style={{ cursor: "pointer" }}>
+              Opções avançadas
+            </summary>
+            <div className="st-field" style={{ marginTop: "0.5rem" }}>
+              <label htmlFor="ig_id">ID da conta do Instagram</label>
+              <input id="ig_id" name="ig_id" inputMode="numeric" className="st-input" defaultValue={acc?.external_id ?? (slug === "obra-facil" ? "17841471283814167" : "")} />
+              <span className="st-hint">Só se a conexão pedir. Para a Obra Fácil já vem preenchido.</span>
+            </div>
+          </details>
         </StateForm>
         {connected && (
           <div className="st-actions">

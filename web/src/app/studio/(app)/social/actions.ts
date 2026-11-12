@@ -43,7 +43,9 @@ export async function connectAction(slug: string, _: ActionState, form: FormData
   const token = String(form.get("token") ?? "");
   if (token.trim().length < 40) return { error: "Cole o token completo." };
   try {
-    const r = await connectInstagram(entity, token, ctx.profile.id);
+    const igId = str(form, "ig_id", 30);
+    if (igId && !/^\d{5,25}$/.test(igId)) return { error: "O ID da conta do Instagram tem só números." };
+    const r = await connectInstagram(entity, token, ctx.profile.id, igId || null);
     revalidatePath(base(slug), "layout");
     const until = r.expiresAt ? `Vale até ${r.expiresAt.toLocaleDateString("pt-BR", { timeZone: TZ })}.` : "Esse token não expira.";
     return { message: `Conectado a @${r.username}. ${until}${r.missingPublish ? " Atenção: falta a permissão de publicar (instagram_content_publish)." : ""}` };
