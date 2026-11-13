@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <>
       <div>
         <h1>Entrar no Studio</h1>
-        <p>Central de gestão da Bellman, da FINC e do Obra Fácil.</p>
+        <p>Central de gestão da Bellman</p>
       </div>
       {configured ? (
         <LoginForm next={next} notice={params.erro ? NOTICES[params.erro] : undefined} />

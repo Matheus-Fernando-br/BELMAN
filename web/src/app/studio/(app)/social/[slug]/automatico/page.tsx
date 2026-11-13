@@ -22,6 +22,7 @@ export default async function AutomationPage({ params }: { params: Promise<{ slu
   const format = R[0]?.format ?? "carousel";
   const review = R.length ? R.every((r) => r.require_review) : true;
   const lead = R[0]?.lead_days ?? 2;
+  const images = R[0]?.images ?? "";
   const pal = (b?.palette ?? {}) as Record<string, string>;
   const lines = (a?: string[] | null) => (a ?? []).join("\n");
   return (
@@ -56,6 +57,18 @@ export default async function AutomationPage({ params }: { params: Promise<{ slu
                 </select>
               </div>
             </div>
+<div className="st-field" style={{ maxWidth: 260 }}>
+                  <label htmlFor="images">Imagens no carrossel</label>
+                  <select id="images" name="images" className="st-input" defaultValue={String(images)}>
+                    <option value="">A IA decide (9 a 11)</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="10">10</option>
+                  </select>
+                </div>
             <fieldset className="st-field" style={{ border: 0, padding: 0, margin: 0 }}>
               <legend>Antes de publicar</legend>
               <label className="st-check">

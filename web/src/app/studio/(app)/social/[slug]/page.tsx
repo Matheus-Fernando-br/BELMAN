@@ -84,6 +84,18 @@ export default async function PostsPage({ params, searchParams }: { params: Prom
                     </label>
                   </div>
                 </fieldset>
+<div className="st-field">
+                  <label htmlFor="images">Imagens no carrossel</label>
+                  <select id="images" name="images" className="st-input" defaultValue="">
+                    <option value="">A IA decide (9 a 11)</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="10">10</option>
+                  </select>
+                </div>
                 <div className="st-field">
                   <label htmlFor="date">Publicar em (opcional, você confirma depois)</label>
                   <div className="st-actions">

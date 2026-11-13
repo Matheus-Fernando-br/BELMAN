@@ -22,7 +22,7 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
 // ordem de prioridade: publicar > desenhar > escrever > manutenção
 const ORDER = ["publish", "render", "generate_copy", "refresh_token", "collect_metrics"];
 
-type RuleRow = Rule & { id: string; entity_id: string; mix_types: string[]; require_review: boolean; auto_generate: boolean; lead_days: number };
+type RuleRow = Rule & { id: string; entity_id: string; mix_types: string[]; require_review: boolean; auto_generate: boolean; lead_days: number; images: number | null };
 
 /** Cria os posts automáticos que vencem nos próximos dias (cada um N dias antes do horário). */
 async function autoCreate(now: Date) {
@@ -47,6 +47,7 @@ async function autoCreate(now: Date) {
           status: "generating",
           scheduled_at: s.at.toISOString(),
           require_review: rule.require_review,
+          copy: rule.format === "carousel" && rule.images ? { _size: rule.images } : {},
         })
         .select("id")
         .single();

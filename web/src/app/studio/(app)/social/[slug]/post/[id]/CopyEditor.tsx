@@ -8,7 +8,7 @@ type J = string | number | boolean | null | J[] | { [k: string]: J };
 const lbl = (k: string) => COPY_LABELS[k] ?? k;
 // ordem de leitura (o banco devolve as chaves do JSON em outra ordem)
 const ORDER = ["carousel", "post", "reel", "story", "youtube", "cover", "kicker", "title", "subtitle", "hook", "number", "body", "items", "on_screen_text", "voiceover", "seconds", "text", "sticker_suggestion", "slides", "beats", "frames", "recap", "description", "chapters", "time", "label", "tags", "thumbnail_text", "script", "cta", "first_line", "keywords"];
-const sorted = (o: Record<string, J>) => Object.entries(o).sort(([a], [b]) => (ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99));
+const sorted = (o: Record<string, J>) => Object.entries(o).filter(([k]) => !k.startsWith("_")).sort(([a], [b]) => (ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99));
 
 /** Editor genérico do texto estruturado: cada campo de texto vira um input; listas de texto, linhas. */
 /** `initial` = só os blocos editáveis; `full` (opcional) = o restante do texto estruturado, preservado. */
@@ -20,6 +20,15 @@ export function CopyEditor({ initial, full = {} }: { initial: Record<string, J>;
       let cur: J = next;
       for (const p of path.slice(0, -1)) cur = (cur as Record<string, J>)[p as string];
       (cur as Record<string, J>)[path.at(-1) as string] = value;
+      return next;
+    });
+  };
+  const removeAt = (path: (string | number)[], index: number) => {
+    setCopy((prev) => {
+      const next = structuredClone(prev) as Record<string, J>;
+      let cur: J = next;
+      for (const p of path) cur = (cur as Record<string, J>)[p as string];
+      (cur as J[]).splice(index, 1);
       return next;
     });
   };
@@ -71,6 +80,11 @@ export function CopyEditor({ initial, full = {} }: { initial: Record<string, J>;
               </summary>
               <div className="st-form" style={{ marginTop: "0.5rem" }}>
                 {typeof item === "object" && item && !Array.isArray(item) ? sorted(item as Record<string, J>).map(([k, v]) => render(v, [...path, i, k], k)) : render(item, [...path, i], key)}
+                {key === "slides" && value.length > 1 && (
+                  <button type="button" className="st-btn" data-variant="danger" onClick={() => removeAt(path, i)} style={{ justifySelf: "start" }}>
+                    Remover esta imagem
+                  </button>
+                )}
               </div>
             </details>
           ))}

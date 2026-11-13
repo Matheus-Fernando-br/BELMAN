@@ -95,11 +95,21 @@ export async function createPost(slug: string, _: ActionState, form: FormData): 
     const date = str(form, "date", 10);
     const time = str(form, "time", 5) || "19:00";
     const at = /^\d{4}-\d{2}-\d{2}$/.test(date) ? zonedTime(date, time, TZ) : null;
+    const size = Number(form.get("images") ?? 0);
     const a = admin();
     const { data: account } = await a.from("social_accounts").select("id").eq("entity_id", entity.id).eq("platform", "instagram").maybeSingle();
     const { data: post, error } = await a
       .from("social_posts")
-      .insert({ entity_id: entity.id, account_id: account?.id ?? null, format: fmt, theme: theme || null, status: "generating", scheduled_at: at?.toISOString() ?? null, created_by: ctx.profile.id })
+      .insert({
+        entity_id: entity.id,
+        account_id: account?.id ?? null,
+        format: fmt,
+        theme: theme || null,
+        status: "generating",
+        scheduled_at: at?.toISOString() ?? null,
+        copy: fmt === "carousel" && size >= 4 && size <= 10 ? { _size: size } : {},
+        created_by: ctx.profile.id,
+      })
       .select("id")
       .single();
     if (error || !post) return { error: "Não foi possível criar o post." };
@@ -240,6 +250,8 @@ export async function saveAutomation(slug: string, _: ActionState, form: FormDat
     const fmt = str(form, "format", 20) === "post" ? "post" : "carousel";
     const review = form.get("review") !== "off";
     const lead = Math.min(7, Math.max(1, Number(form.get("lead_days") ?? 2) || 2));
+    const imagesN = Number(form.get("images") ?? 0);
+    const images = fmt === "carousel" && imagesN >= 4 && imagesN <= 10 ? imagesN : null;
     if (on && !days.length) return { error: "Escolha pelo menos um dia." };
     if (on && !/^\d{2}:\d{2}$/.test(time)) return { error: "Escolha o horário." };
     const supabase = await createClient();
@@ -247,7 +259,7 @@ export async function saveAutomation(slug: string, _: ActionState, form: FormDat
     await supabase.from("content_rules").delete().eq("entity_id", entity.id);
     if (days.length) {
       const { error } = await supabase.from("content_rules").insert(
-        days.map((weekday) => ({ entity_id: entity.id, format: fmt, weekday, local_time: time, count: 1, mix_types: TYPES, auto_generate: on, require_review: review, lead_days: lead, active: true })),
+        days.map((weekday) => ({ entity_id: entity.id, format: fmt, weekday, local_time: time, count: 1, mix_types: TYPES, auto_generate: on, require_review: review, lead_days: lead, images, active: true })),
       );
       if (error) return { error: "Não foi possível salvar." };
     }

@@ -33,6 +33,7 @@ export async function generateCopy(job: Job) {
     recentThemes: (recent ?? []).map((r) => r.theme as string),
     instruction: redo ? String(job.payload.instruction ?? "") : undefined,
     current: redo ? { caption: post.caption, hashtags: post.hashtags, ...post.copy } : undefined,
+    size: post.copy?._size ?? null,
   });
   for (const u of g.usages) await logUsage(job.entity_id, job.post_id, redo ? "redo" : "post", u);
   await setPost(job.post_id, {
@@ -41,7 +42,7 @@ export async function generateCopy(job: Job) {
     caption: g.caption,
     hashtags: g.hashtags,
     alt_texts: g.alt_texts,
-    copy: g.copy,
+    copy: post.copy?._size ? { ...g.copy, _size: post.copy._size } : g.copy,
     status: "rendering",
     error: null,
     revision: (post.revision ?? 0) + 1,

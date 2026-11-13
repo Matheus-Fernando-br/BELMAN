@@ -60,7 +60,7 @@ TIPOS DE POST
 - oferta: convite direto ao produto.
 
 FORMATOS
-- carousel: capa (kicker curto, título, subtítulo) + 6 a 10 slides + resumo (3 a 5 itens) + CTA. Tipos de slide: dor (o problema), conteudo, lista (2 a 6 itens curtos), numero (um número grande em "number"), citacao.
+- carousel: capa (kicker curto, título, subtítulo) + 6 a 8 slides (ou exatamente o que o TAMANHO pedir; se a instrução de mudança pedir outra quantidade de imagens, siga a instrução) + resumo (3 a 5 itens) + CTA. Tipos de slide: dor (o problema), conteudo, lista (2 a 6 itens curtos), numero (um número grande em "number"), citacao.
 - post: imagem única (kicker, título, texto).
 - reel: gancho dos 2 primeiros segundos + batidas (texto na tela, narração, segundos) somando 15 a 45 s + CTA.
 - story: 3 a 5 telas; sticker_suggestion = enquete/caixinha/link sugerido, ou null.
@@ -194,14 +194,14 @@ function finish(raw: Raw, format: FormatKey, brand: BrandProfile) {
   const block = raw[k] as Record<string, unknown> | null;
   // autofix também nos textos das artes
   const fixDeep = (v: unknown): unknown => (typeof v === "string" ? autofix(v) : Array.isArray(v) ? v.map(fixDeep) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([a, b]) => [a, fixDeep(b)])) : v);
-  const copy = { [k]: fixDeep(block), first_line: autofix(raw.first_line), keywords: raw.keywords };
+  const copy: Record<string, unknown> = { [k]: fixDeep(block), first_line: autofix(raw.first_line), keywords: raw.keywords };
   const issues = lintCaption(caption, hashtags, { maxHashtags: brand.max_hashtags, bannedWords: brand.banned_words, maxEmojis: /nenhum|zero|sem emoji/i.test(brand.emoji_policy ?? "") ? 0 : 1 });
   return { caption, hashtags, copy, issues, alt_texts: raw.alt_texts.map(autofix) };
 }
 
 export async function generatePost(
   brand: BrandProfile,
-  req: { theme: string; format: FormatKey | "auto"; post_type: string | null; recentThemes: string[]; instruction?: string; current?: unknown },
+  req: { theme: string; format: FormatKey | "auto"; post_type: string | null; recentThemes: string[]; instruction?: string; current?: unknown; size?: number | null },
 ): Promise<Generated> {
   const usages: Usage[] = [];
   const schema = schemaFor(req.format);
@@ -209,6 +209,7 @@ export async function generatePost(
     `TEMA: ${req.theme}`,
     req.format === "auto" ? "FORMATO: escolha o melhor entre carousel, post, reel e story para este tema." : `FORMATO: ${req.format}`,
     req.post_type ? `TIPO: ${req.post_type}` : "TIPO: escolha o melhor.",
+    req.size ? `TAMANHO: o carrossel deve ter exatamente ${req.size} imagens no total, ou seja, ${Math.max(1, req.size - 3)} slide(s) de conteúdo (além da capa, do resumo e da chamada).` : "",
     req.recentThemes.length ? `NÃO REPITA estes temas recentes:\n${req.recentThemes.map((t) => `- ${t}`).join("\n")}` : "",
     req.current ? `VERSÃO ATUAL (refaça a partir dela):\n${JSON.stringify(req.current)}` : "",
     req.instruction ? `O QUE MUDAR: ${req.instruction}` : "",
