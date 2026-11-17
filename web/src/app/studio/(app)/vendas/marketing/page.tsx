@@ -3,7 +3,7 @@ import Link from "next/link";
 import { QuickSelect, RecordForm } from "@/components/studio/RecordForm";
 import { formatCents } from "@/lib/studio/finance-math";
 import { CAMPAIGN_CHANNEL, label } from "@/lib/studio/records";
-import { br, daysAgoISO, requireScope } from "@/lib/studio/scope";
+import { br, daysAgoISO, loadRefs, requireScope } from "@/lib/studio/scope";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Marketing e campanhas" };
@@ -23,6 +23,10 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
     ["Instagram · Stories", (social ?? []).filter((p) => p.format === "story").length],
     ["YouTube", (social ?? []).filter((p) => p.format.startsWith("youtube")).length],
   ] as const;
+  const refs = await loadRefs(
+    ctx.visible.map((x) => x.id),
+    ["contacts"],
+  );
   const ent = new Map(ctx.entities.map((x) => [x.id, x.name]));
   const editing = (campaigns ?? []).find((c) => c.id === params.editar);
   return (
@@ -98,7 +102,7 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
         {ctx.canWrite && (
           <article className="st-card">
             <h2>{editing ? "Editar campanha" : "Nova campanha"}</h2>
-            <RecordForm kind="campaigns" record={editing} entities={ctx.entityOptions} defaults={{ status: "active", channel: "instagram" }} back="/studio/vendas/marketing" />
+            <RecordForm kind="campaigns" record={editing} entities={ctx.entityOptions} refs={refs} defaults={{ status: "active", channel: "instagram" }} back="/studio/vendas/marketing" />
           </article>
         )}
       </div>

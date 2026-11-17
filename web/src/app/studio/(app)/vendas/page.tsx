@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { formatCents } from "@/lib/studio/finance-math";
-import { label, LEAD_SOURCE, LEAD_STAGE } from "@/lib/studio/records";
-import { daysAgoISO, requireScope, todayLocal } from "@/lib/studio/scope";
+import { CONTACT_CATEGORY, DOCUMENT_KIND, label, LEAD_SOURCE, LEAD_STAGE, MATERIAL_PURPOSE } from "@/lib/studio/records";
+import { br, daysAgoISO, requireScope, todayLocal } from "@/lib/studio/scope";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Vendas" };
@@ -18,6 +18,20 @@ export default async function SalesDashboard({ searchParams }: { searchParams: P
   const month = today.slice(0, 7);
   const d90 = daysAgoISO(90);
   const d30 = daysAgoISO(30).slice(0, 10);
+  const in30 = new Date(Date.parse(today) + 30 * 864e5).toISOString().slice(0, 10);
+  const [{ data: contacts }, { data: docs }, { data: mats }, { data: camps }] = await Promise.all([
+    supabase.from("contacts").select("category,person_type,entity_id,status").in("entity_id", ctx.scopeIds),
+    supabase.from("documents").select("id,title,kind,status,valid_until,storage_path,contact_id").in("entity_id", ctx.scopeIds),
+    supabase.from("materials").select("purpose,created_at").in("entity_id", ctx.scopeIds),
+    supabase.from("campaigns").select("id,name,status,budget_cents,end_date").in("entity_id", ctx.scopeIds),
+  ]);
+  const C = (contacts ?? []).filter((c) => c.status === "ativo");
+  const D = docs ?? [];
+  const vigentes = D.filter((d) => d.status === "vigente");
+  const expiring = vigentes.filter((d) => d.valid_until && d.valid_until <= in30).sort((a, b) => (a.valid_until ?? "").localeCompare(b.valid_until ?? ""));
+  const noFile = D.filter((d) => !d.storage_path);
+  const activeCamps = (camps ?? []).filter((k) => k.status === "active");
+  const byCat = CONTACT_CATEGORY.map(([v, l]) => ({ v, l, pj: C.filter((c) => c.category === v && c.person_type === "pj").length, pf: C.filter((c) => c.category === v && c.person_type === "pf").length })).filter((r) => r.pj + r.pf);
   const [{ data: leads }, { data: contracts }, marketing] = await Promise.all([
     supabase.from("leads").select("id,stage,source,value_cents,won_at,lost_at,created_at,entity_id").in("entity_id", ctx.scopeIds),
     supabase.from("contracts").select("value_cents,cycle,status,start_date,canceled_at,entity_id").in("entity_id", ctx.scopeIds),
@@ -75,11 +89,137 @@ export default async function SalesDashboard({ searchParams }: { searchParams: P
           <h1>Dashboard comercial</h1>
         </div>
         {ctx.canWrite && (
-          <Link className="st-btn" href={`/studio/vendas/crm${e ? `?e=${e}` : ""}#novo`}>
-            + Lead
-          </Link>
+          <div className="st-actions">
+            <Link className="st-btn" href="/studio/vendas/contatos#novo">
+              + Contato
+            </Link>
+            <Link className="st-btn" data-variant="ghost" href="/studio/vendas/documentos#novo">
+              + Documento
+            </Link>
+          </div>
         )}
       </div>
+      <dl className="st-kpis">
+        <div className="st-kpi">
+          <dt>Contatos ativos</dt>
+          <dd>{C.length}</dd>
+          <span className="st-delta">
+            {C.filter((c) => c.person_type === "pj").length} PJ · {C.filter((c) => c.person_type === "pf").length} PF
+          </span>
+        </div>
+        <div className="st-kpi">
+          <dt>Parceiros comerciais</dt>
+          <dd>{C.filter((c) => c.category === "parceiro").length}</dd>
+          <span className="st-delta">{C.filter((c) => c.category === "empresa" || c.category === "loja").length} empresas e lojas</span>
+        </div>
+        <div className="st-kpi">
+          <dt>Profissionais e prestadores</dt>
+          <dd>{C.filter((c) => c.category === "profissional" || c.category === "prestador").length}</dd>
+        </div>
+        <div className="st-kpi">
+          <dt>Contratos vigentes</dt>
+          <dd>{vigentes.length}</dd>
+          <span className="st-delta" data-tone={expiring.length ? "down" : undefined}>
+            {expiring.length} vencendo em 30 dias
+          </span>
+        </div>
+        <div className="st-kpi">
+          <dt>Materiais</dt>
+          <dd>{(mats ?? []).length}</dd>
+          <span className="st-delta">{noFile.length ? `${noFile.length} documento(s) sem arquivo` : "todos os documentos com arquivo"}</span>
+        </div>
+        <div className="st-kpi">
+          <dt>Campanhas ativas</dt>
+          <dd>{activeCamps.length}</dd>
+          <span className="st-delta">{money(activeCamps.reduce((s, k) => s + Number(k.budget_cents ?? 0), 0))} de orçamento</span>
+        </div>
+      </dl>
+      <div className="st-grid" data-cols="3">
+        <article className="st-card">
+          <div className="st-card-head">
+            <h2>Contatos por categoria</h2>
+            <Link href={`/studio/vendas/contatos${e ? `?e=${e}` : ""}`}>Ver todos</Link>
+          </div>
+          <div className="st-table-wrap">
+            <table className="st-table">
+              <thead>
+                <tr>
+                  <th scope="col">Categoria</th>
+                  <th scope="col" style={{ textAlign: "right" }}>
+                    PJ
+                  </th>
+                  <th scope="col" style={{ textAlign: "right" }}>
+                    PF
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {byCat.map((r) => (
+                  <tr key={r.v}>
+                    <th scope="row">
+                      <Link href={`/studio/vendas/contatos?cat=${r.v}${e ? `&e=${e}` : ""}`}>{r.l}</Link>
+                    </th>
+                    <td className="st-num">{r.pj}</td>
+                    <td className="st-num">{r.pf}</td>
+                  </tr>
+                ))}
+                {!byCat.length && (
+                  <tr>
+                    <td colSpan={3}>
+                      Nenhum contato ainda. <Link href="/studio/vendas/contatos#novo">Cadastrar</Link>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </article>
+        <article className="st-card">
+          <div className="st-card-head">
+            <h2>Contratos a vencer</h2>
+            <Link href={`/studio/vendas/documentos${e ? `?e=${e}` : ""}`}>Ver todos</Link>
+          </div>
+          <ul className="st-list">
+            {expiring.slice(0, 6).map((d) => (
+              <li key={d.id}>
+                <span className="st-grow">
+                  <Link href={`/studio/vendas/documentos/${d.id}`}>{d.title}</Link>
+                  <div className="st-hint">{label(DOCUMENT_KIND, d.kind)}</div>
+                </span>
+                <span className="st-status" data-tone={(d.valid_until ?? "") < today ? "bad" : "warn"}>
+                  {br(d.valid_until)}
+                </span>
+              </li>
+            ))}
+            {!expiring.length && <li className="st-hint">Nenhum contrato vence nos próximos 30 dias.</li>}
+          </ul>
+        </article>
+        <article className="st-card">
+          <div className="st-card-head">
+            <h2>Materiais por finalidade</h2>
+            <Link href={`/studio/vendas/materiais${e ? `?e=${e}` : ""}`}>Abrir biblioteca</Link>
+          </div>
+          <ul className="st-list">
+            {MATERIAL_PURPOSE.map(([v, l]) => [v, l, (mats ?? []).filter((m) => m.purpose === v).length] as const)
+              .filter(([, , n]) => n)
+              .map(([v, l, n]) => (
+                <li key={v}>
+                  <span className="st-grow">
+                    <Link href={`/studio/vendas/materiais?fin=${v}${e ? `&e=${e}` : ""}`}>{l}</Link>
+                  </span>
+                  <strong>{n}</strong>
+                </li>
+              ))}
+            {!mats?.length && <li className="st-hint">Biblioteca vazia.</li>}
+          </ul>
+        </article>
+      </div>
+
+      <h2 style={{ margin: "2rem 0 0.75rem" }}>Vendas e assinaturas</h2>
+      <p className="st-hint" style={{ marginTop: 0 }}>
+        Do funil de leads e dos contratos de assinatura dos produtos. <Link href={`/studio/vendas/crm${e ? `?e=${e}` : ""}`}>Abrir o funil de vendas (CRM)</Link> ·{" "}
+        <Link href="/studio/vendas/contratos">Assinaturas</Link>
+      </p>
       <dl className="st-kpis">
         <div className="st-kpi">
           <dt>Leads em aberto</dt>

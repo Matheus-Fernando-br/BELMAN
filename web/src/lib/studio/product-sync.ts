@@ -18,6 +18,8 @@ export type ProductMetrics = {
     canceledInPeriod: number;
     byPlan: { planId: string; planName: string; priceCents: number; active: number; mrrCents: number }[];
   };
+  /** Catálogo completo de planos e preços (inclui planos sem assinante). */
+  plans?: { planId: string; planName: string; priceCents: number; interval?: string; active: number }[];
   mrrCents: number;
   revenueInPeriodCents: number;
   monthly: { month: string; newUsers: number; newSubscriptions: number; canceledSubscriptions: number; activeSubscriptionsAtEnd: number; revenueCents: number }[];
@@ -38,6 +40,33 @@ type RemotePayment = {
 const TZ = "America/Sao_Paulo";
 const localDate = (iso: string) => new Date(iso).toLocaleDateString("sv-SE", { timeZone: TZ });
 const METHOD = { pix: "Pix", credit_card: "cartão de crédito", debit_card: "cartão de débito" } as Record<string, string>;
+
+type Admin = NonNullable<ReturnType<typeof createAdminClient>>;
+
+/** Grava o catálogo de planos do produto em product_plans (fonte "sync"). */
+async function syncPlans(admin: Admin, entityId: string, m: ProductMetrics, now: Date) {
+  const active = new Map(m.subscriptions.byPlan.map((p) => [p.planId, p.active]));
+  const list = m.plans?.length ? m.plans : m.subscriptions.byPlan;
+  if (!list.length) return;
+  const rows = list.map((p, i) => ({
+    entity_id: entityId,
+    external_id: p.planId,
+    name: p.planName,
+    price_cents: Math.max(0, Math.round(p.priceCents)),
+    billing: (p as { interval?: string }).interval === "year" ? "yearly" : "monthly",
+    subscribers: active.get(p.planId) ?? p.active ?? 0,
+    source: "sync",
+    active: true,
+    sort_order: i,
+    synced_at: now.toISOString(),
+  }));
+  await admin.from("product_plans").upsert(rows, { onConflict: "entity_id,external_id" });
+  // plano que sumiu do produto fica inativo (só quando veio o catálogo completo)
+  if (m.plans?.length) {
+    const ids = rows.map((r) => r.external_id);
+    await admin.from("product_plans").update({ active: false }).eq("entity_id", entityId).eq("source", "sync").not("external_id", "in", `(${ids.map((x) => `"${x}"`).join(",")})`);
+  }
+}
 
 export type SyncResult = { slug: string; ok: boolean; message: string; imported: number; updated: number };
 
@@ -81,6 +110,8 @@ export async function syncProduct(slug: string, trigger: "cron" | "manual"): Pro
       revenue_month_cents: m.revenueInPeriodCents,
       monthly: m.monthly.map(({ newUsers: _n, ...rest }) => rest),
     });
+    // planos e preços oficiais do produto → usados pelo Planejamento (só leitura no Studio)
+    await syncPlans(admin, entity.id, m, now).catch(() => undefined);
 
     // 2) pagamentos -> receitas realizadas no Financeiro (idempotente por external_ref)
     const { data: category } = await admin.from("fin_categories").select("id").eq("type", "income").eq("name", "Assinaturas").maybeSingle();

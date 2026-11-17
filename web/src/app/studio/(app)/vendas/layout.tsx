@@ -2,8 +2,9 @@ import { SectionTabs } from "@/components/studio/SectionTabs";
 
 const TABS = [
   { href: "/studio/vendas", label: "Dashboard comercial" },
-  { href: "/studio/vendas/crm", label: "CRM e funil" },
-  { href: "/studio/vendas/contratos", label: "Contratos" },
+  { href: "/studio/vendas/contatos", label: "Contatos" },
+  { href: "/studio/vendas/documentos", label: "Contratos e documentos" },
+  { href: "/studio/vendas/materiais", label: "Materiais de divulgação" },
   { href: "/studio/vendas/marketing", label: "Marketing e campanhas" },
 ];
 

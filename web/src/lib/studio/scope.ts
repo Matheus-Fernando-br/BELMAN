@@ -21,7 +21,7 @@ export async function requireScope(raw?: string | string[]): Promise<ScopeContex
 }
 
 /** Opções dos campos de referência (responsável, projeto, cliente, versão, campanha). */
-export async function loadRefs(scopeIds: string[], needs: ("profiles" | "projects" | "customers" | "releases" | "campaigns")[]) {
+export async function loadRefs(scopeIds: string[], needs: ("profiles" | "projects" | "customers" | "releases" | "campaigns" | "contacts")[]) {
   const supabase = await createClient();
   const out: Partial<Record<(typeof needs)[number], Option[]>> = {};
   await Promise.all(
@@ -38,6 +38,9 @@ export async function loadRefs(scopeIds: string[], needs: ("profiles" | "project
       } else if (n === "releases") {
         const { data } = await supabase.from("releases").select("id,version,entity_id").in("entity_id", scopeIds).neq("status", "released").order("target_date");
         out.releases = (data ?? []).map((p) => [p.id, p.version] as const);
+      } else if (n === "contacts") {
+        const { data } = await supabase.from("contacts").select("id,name,trade_name").in("entity_id", scopeIds).order("name").limit(1000);
+        out.contacts = (data ?? []).map((p) => [p.id, p.trade_name ? `${p.trade_name} (${p.name})` : p.name] as const);
       } else if (n === "campaigns") {
         const { data } = await supabase.from("campaigns").select("id,name").in("entity_id", scopeIds).order("name");
         out.campaigns = (data ?? []).map((p) => [p.id, p.name] as const);

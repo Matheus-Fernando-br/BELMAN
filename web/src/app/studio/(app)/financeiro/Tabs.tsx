@@ -12,7 +12,7 @@ const TABS = [
   { href: "/studio/financeiro/orcamento", label: "Orçamento" },
   { href: "/studio/financeiro/recorrentes", label: "Recorrentes" },
   { href: "/studio/financeiro/aportes", label: "Aportes" },
-  { href: "/studio/financeiro/planejamento", label: "Planejamento" },
+  { href: "/studio/financeiro/planejamento", label: "Caixa e runway" },
 ];
 
 function Inner() {

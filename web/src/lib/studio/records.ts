@@ -10,11 +10,50 @@ export type FieldDef = {
   required?: boolean;
   max?: number;
   options?: readonly Option[];
-  ref?: "profiles" | "projects" | "customers" | "releases" | "campaigns";
+  ref?: "profiles" | "projects" | "customers" | "releases" | "campaigns" | "contacts";
   hint?: string;
   wide?: boolean;
   placeholder?: string;
 };
+
+export const CONTACT_CATEGORY: readonly Option[] = [
+  ["empresa", "Empresa"],
+  ["loja", "Loja"],
+  ["parceiro", "Parceiro comercial"],
+  ["profissional", "Profissional"],
+  ["prestador", "Prestador de serviço"],
+  ["cliente", "Cliente"],
+  ["outro", "Outro"],
+];
+export const PERSON_TYPE: readonly Option[] = [
+  ["pj", "Pessoa Jurídica"],
+  ["pf", "Pessoa Física"],
+];
+export const DOCUMENT_KIND: readonly Option[] = [
+  ["contrato", "Contrato"],
+  ["aditivo", "Aditivo"],
+  ["proposta", "Proposta"],
+  ["nda", "Acordo de confidencialidade"],
+  ["procuracao", "Procuração"],
+  ["nota", "Nota / recibo"],
+  ["outro", "Outro"],
+];
+export const DOCUMENT_STATUS: readonly Option[] = [
+  ["rascunho", "Rascunho"],
+  ["em_assinatura", "Em assinatura"],
+  ["vigente", "Vigente"],
+  ["encerrado", "Encerrado"],
+];
+export const MATERIAL_PURPOSE: readonly Option[] = [
+  ["institucional", "Institucional"],
+  ["redes_sociais", "Redes sociais"],
+  ["panfleto", "Panfleto"],
+  ["cartaz", "Cartaz"],
+  ["apresentacao", "Apresentação"],
+  ["anuncio", "Anúncio"],
+  ["evento", "Evento"],
+  ["outro", "Outro"],
+];
 
 export type RecordDef = {
   table: string;
@@ -256,7 +295,47 @@ export const RECORDS = {
       { name: "start_date", label: "Início", kind: "date" },
       { name: "end_date", label: "Fim", kind: "date" },
       { name: "goal", label: "Meta", kind: "text", max: 200 },
+      { name: "contact_id", label: "Parceiro / contato", kind: "ref", ref: "contacts" },
       { name: "notes", label: "Estratégia e resultados", kind: "textarea", max: 8000, wide: true },
+    ],
+  },
+  contacts: {
+    table: "contacts",
+    label: "Contato",
+    quick: ["status"],
+    fields: [
+      { name: "name", label: "Nome ou razão social", kind: "text", required: true, max: 160 },
+      { name: "trade_name", label: "Nome fantasia", kind: "text", max: 160 },
+      { name: "person_type", label: "Tipo", kind: "select", options: PERSON_TYPE, required: true },
+      { name: "category", label: "Categoria", kind: "select", options: CONTACT_CATEGORY, required: true },
+      { name: "entity_id", label: "Vinculado a", kind: "entity", required: true },
+      { name: "document", label: "CPF ou CNPJ", kind: "text", max: 20 },
+      { name: "contact_person", label: "Pessoa de contato", kind: "text", max: 120 },
+      { name: "role", label: "Profissão ou cargo", kind: "text", max: 120 },
+      { name: "email", label: "E-mail", kind: "email", max: 160 },
+      { name: "phone", label: "Telefone / WhatsApp", kind: "text", max: 40 },
+      { name: "city", label: "Cidade", kind: "text", max: 80 },
+      { name: "state", label: "UF", kind: "text", max: 2, placeholder: "MG" },
+      { name: "website", label: "Site", kind: "url", max: 200 },
+      { name: "instagram", label: "Instagram", kind: "text", max: 80, placeholder: "@perfil" },
+      { name: "status", label: "Situação", kind: "select", options: [["ativo", "Ativo"], ["inativo", "Inativo"]], required: true },
+      { name: "notes", label: "Observações", kind: "textarea", max: 8000, wide: true },
+    ],
+  },
+  documents: {
+    table: "documents",
+    label: "Documento",
+    quick: ["status"],
+    fields: [
+      { name: "title", label: "Título", kind: "text", required: true, max: 160, placeholder: "Contrato de parceria com…" },
+      { name: "kind", label: "Tipo", kind: "select", options: DOCUMENT_KIND, required: true },
+      { name: "entity_id", label: "Empresa", kind: "entity", required: true },
+      { name: "contact_id", label: "Contato vinculado", kind: "ref", ref: "contacts" },
+      { name: "status", label: "Situação", kind: "select", options: DOCUMENT_STATUS, required: true },
+      { name: "signed_at", label: "Assinado em", kind: "date" },
+      { name: "valid_until", label: "Válido até", kind: "date" },
+      { name: "value_cents", label: "Valor (R$)", kind: "money" },
+      { name: "notes", label: "Observações", kind: "textarea", max: 8000, wide: true },
     ],
   },
 } as const satisfies Record<string, RecordDef>;

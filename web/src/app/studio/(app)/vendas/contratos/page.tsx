@@ -5,7 +5,7 @@ import { br, requireScope, todayLocal } from "@/lib/studio/scope";
 import { createClient } from "@/lib/supabase/server";
 import { CancelContractForm } from "../Forms";
 
-export const metadata: Metadata = { title: "Contratos" };
+export const metadata: Metadata = { title: "Assinaturas dos produtos" };
 
 const CYCLE = { monthly: "Mensal", yearly: "Anual", one_time: "Único" } as Record<string, string>;
 const STATUS = { active: "Ativo", canceled: "Cancelado", ended: "Encerrado" } as Record<string, string>;
@@ -23,7 +23,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
       <div className="st-page-head">
         <div>
           <p className="st-eyebrow">Vendas · {ctx.filter.label}</p>
-          <h1>Contratos comerciais</h1>
+          <h1>Assinaturas dos produtos</h1>
           <p>Planos, valores, contratação, renovação e cancelamento. Contratos nascem ao concluir uma venda no CRM.</p>
         </div>
       </div>

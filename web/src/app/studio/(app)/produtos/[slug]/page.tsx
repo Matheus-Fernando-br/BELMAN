@@ -6,6 +6,7 @@ import { secretEnvName } from "@/lib/studio/product-link";
 import { requireStudio } from "@/lib/studio/session";
 import { createClient } from "@/lib/supabase/server";
 import { SyncButton } from "../SyncButton";
+import { PlansSection } from "./PlansSection";
 
 export const metadata: Metadata = { title: "Produto" };
 
@@ -227,6 +228,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         </>
       )}
+      <PlansSection entityId={product.id} name={product.name} isAdmin={ctx.isAdmin} integrated={Boolean(product.metrics_url)} />
     </>
   );
 }

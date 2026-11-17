@@ -13,6 +13,7 @@ type NavItem = { href: string; label: string; icon: IconName };
 const NAV: NavItem[] = [
   { href: "/studio", label: "Dashboard", icon: "dashboard" },
   { href: "/studio/financeiro", label: "Financeiro", icon: "finance" },
+  { href: "/studio/planejamento", label: "Planejamento", icon: "plan" },
   { href: "/studio/operacoes", label: "Operações", icon: "ops" },
   { href: "/studio/vendas", label: "Vendas", icon: "sales" },
   { href: "/studio/social", label: "Redes Sociais", icon: "social" },
