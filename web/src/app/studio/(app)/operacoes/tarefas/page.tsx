@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { QuickSelect, RecordForm } from "@/components/studio/RecordForm";
-import { label, PRIORITY, TASK_STATUS } from "@/lib/studio/records";
+import { label, PRIORITY, RECURRENCE, TASK_STATUS } from "@/lib/studio/records";
 import { br, loadRefs, requireScope, todayLocal } from "@/lib/studio/scope";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Tarefas" };
 
-type Task = { id: string; title: string; status: string; priority: string; due_date: string | null; assignee_id: string | null; entity_id: string; description: string | null; project_id: string | null; customer_id: string | null };
+type Task = { id: string; title: string; status: string; priority: string; due_date: string | null; assignee_id: string | null; entity_id: string; description: string | null; project_id: string | null; customer_id: string | null; recurrence: string | null; wiki_page_id: string | null };
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<{ e?: string; ver?: string; quem?: string; editar?: string }> }) {
   const params = await searchParams;
@@ -15,10 +15,11 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const supabase = await createClient();
   let q = supabase.from("tasks").select("*").in("entity_id", ctx.scopeIds).order("due_date", { ascending: true, nullsFirst: false }).limit(500);
   if (params.quem === "eu") q = q.eq("assignee_id", ctx.profile.id);
-  const [{ data }, refs] = await Promise.all([q, loadRefs(ctx.scopeIds, ["profiles", "projects", "customers"])]);
+  const [{ data }, refs] = await Promise.all([q, loadRefs(ctx.scopeIds, ["profiles", "projects", "customers", "wiki_pages"])]);
   const tasks = (data ?? []) as Task[];
   const today = todayLocal();
   const people = new Map((refs.profiles ?? []).map(([id, n]) => [id, n]));
+  const how = new Map((refs.wiki_pages ?? []).map(([id, n]) => [id, n]));
   const ent = new Map(ctx.entities.map((x) => [x.id, x]));
   const list = params.ver === "lista";
   const editing = tasks.find((t) => t.id === params.editar);
@@ -50,7 +51,13 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
               {br(t.due_date)}
             </span>
           )}
+          {t.recurrence && <span className="st-tag">↻ {label(RECURRENCE, t.recurrence)}</span>}
         </div>
+        {t.wiki_page_id && how.has(t.wiki_page_id) && (
+          <Link href={`/studio/operacoes/processos/${t.wiki_page_id}`} className="st-hint">
+            Como fazer: {how.get(t.wiki_page_id)}
+          </Link>
+        )}
         <div className="st-actions" style={{ justifyContent: "space-between" }}>
           <small className="st-hint">{t.assignee_id ? people.get(t.assignee_id) : "Sem responsável"}</small>
           <QuickSelect kind="tasks" id={t.id} field="status" value={t.status} options={TASK_STATUS} label={`Situação de ${t.title}`} disabled={!ctx.canWrite} />
@@ -64,7 +71,8 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       <div className="st-page-head">
         <div>
           <p className="st-eyebrow">Operações · {ctx.filter.label}</p>
-          <h1>Tarefas</h1>
+          <h1>Tarefas e rotinas</h1>
+          <p>O que fazer. Rotinas (“Repete”) se recriam sozinhas ao concluir; ligue a tarefa a um processo para o “como fazer”.</p>
         </div>
         <div className="st-actions">
           <Link className="st-tag" href={qs({ ver: undefined })} aria-current={!list ? "true" : undefined}>

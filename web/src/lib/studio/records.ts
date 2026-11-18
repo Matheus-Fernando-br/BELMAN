@@ -10,7 +10,7 @@ export type FieldDef = {
   required?: boolean;
   max?: number;
   options?: readonly Option[];
-  ref?: "profiles" | "projects" | "customers" | "releases" | "campaigns" | "contacts";
+  ref?: "profiles" | "projects" | "customers" | "releases" | "campaigns" | "contacts" | "wiki_pages";
   hint?: string;
   wide?: boolean;
   placeholder?: string;
@@ -73,6 +73,13 @@ export const TASK_STATUS: readonly Option[] = [
   ["doing", "Em andamento"],
   ["review", "Em revisão"],
   ["done", "Concluída"],
+];
+export const RECURRENCE: readonly Option[] = [
+  ["daily", "Todo dia"],
+  ["weekdays", "Dias úteis (seg a sex)"],
+  ["weekly", "Toda semana"],
+  ["monthly", "Todo mês"],
+  ["yearly", "Todo ano"],
 ];
 export const CUSTOMER_STATUS: readonly Option[] = [
   ["onboarding", "Em implantação"],
@@ -157,6 +164,8 @@ export const RECORDS = {
       { name: "priority", label: "Prioridade", kind: "select", options: PRIORITY, required: true },
       { name: "assignee_id", label: "Responsável", kind: "ref", ref: "profiles" },
       { name: "due_date", label: "Prazo", kind: "date" },
+      { name: "recurrence", label: "Repete (rotina)", kind: "select", options: RECURRENCE, hint: "Ao concluir, a próxima é criada sozinha." },
+      { name: "wiki_page_id", label: "Como fazer (processo)", kind: "ref", ref: "wiki_pages" },
       { name: "project_id", label: "Projeto", kind: "ref", ref: "projects" },
       { name: "customer_id", label: "Cliente", kind: "ref", ref: "customers" },
       { name: "description", label: "Detalhes", kind: "textarea", max: 4000, wide: true },

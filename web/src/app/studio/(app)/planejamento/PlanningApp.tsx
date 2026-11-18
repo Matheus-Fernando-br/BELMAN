@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { LineChart } from "@/components/studio/charts";
 import { FormMessage } from "@/components/studio/SubmitButton";
+import { addMonths, monthLabel } from "@/lib/studio/finance-math";
 import {
+  cashProjection,
   distribute,
   EXPENSE_GROUPS,
   expensesByGroup,
+  expensesByMonth,
   monthlyOf,
   planPrice,
   planSubscribers,
@@ -107,7 +110,38 @@ export function PlanningApp({ base, scenarios, initialId, initialView }: { base:
   const setOverride = (slug: string, g: ExpenseGroup, v: string) =>
     patch({ expenseOverride: { ...config.expenseOverride, [slug]: { ...config.expenseOverride[slug], [g]: v === "" ? undefined : toCents(v) } } });
 
-  const labels = months.map((m) => `M${m.index}`);
+  const labels = months.map((m) => monthLabel(addMonths(base.startMonth, m.index - 1), true));
+  const cashNow = view === "consolidado" ? (base.cash.consolidado ?? 0) : (base.cash[view] ?? 0);
+  const cash = cashProjection(months, cashNow);
+  const lowest = Math.min(cashNow, ...cash);
+  const negativeAt = cash.findIndex((v) => v < 0);
+  const groupMonths = useMemo(() => {
+    const per = viewProducts.map((p) => expensesByMonth(base, config, p.slug));
+    return Array.from({ length: config.horizon }, (_, i) => Object.fromEntries(EXPENSE_GROUPS.map(([g]) => [g, per.reduce((s, l) => s + l[i][g], 0)])) as Record<ExpenseGroup, number>);
+  }, [base, config, viewProducts]);
+  const sheet: { label: string; values: number[]; total: number | null; money?: boolean; strong?: boolean; sign?: -1 }[] = [
+    { label: "Assinantes", values: months.map((m) => Math.round(m.subscribers)), total: null },
+    { label: "Faturamento", values: months.map((m) => m.revenue), total: t.revenue, money: true, strong: true },
+    { label: "Impostos", values: months.map((m) => m.taxes), total: t.taxes, money: true, sign: -1 },
+    ...EXPENSE_GROUPS.map(([g, l]) => {
+      const values = groupMonths.map((x) => x[g]);
+      return { label: l, values, total: values.reduce((a, b) => a + b, 0), money: true, sign: -1 as const };
+    }),
+    { label: "Entradas e saídas pontuais", values: months.map((m) => m.extra), total: t.extra, money: true },
+    { label: "Lucro do mês", values: months.map((m) => m.net), total: t.net, money: true, strong: true },
+    { label: "Caixa no fim do mês", values: cash, total: null, money: true, strong: true },
+  ];
+  const downloadCsv = () => {
+    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const money = (c: number) => (c / 100).toFixed(2).replace(".", ",");
+    const lines = [["", ...labels, "Total"].map(cell).join(";"), ...sheet.map((r) => [r.label, ...r.values.map((v) => (r.money ? money(r.sign ? -v : v) : v)), r.total == null ? "" : r.money ? money(r.sign ? -r.total : r.total) : r.total].map(cell).join(";"))];
+    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `planejamento-${current?.name ?? "cenario"}-${view}.csv`.toLowerCase().replace(/\s+/g, "-");
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
   return (
     <>
@@ -151,13 +185,25 @@ export function PlanningApp({ base, scenarios, initialId, initialView }: { base:
         </div>
         <FormMessage state={state} />
         <nav className="st-actions st-hint" aria-label="Seções">
-          <a href="#visao">Visão geral</a>·<a href="#faturamento">Faturamento</a>·<a href="#despesas">Despesas</a>·<a href="#resultado">Resultado</a>·<a href="#socios">Sócios</a>·<a href="#cenarios">Cenários</a>
+          <a href="#visao">Visão geral</a>·<a href="#planilha">Planilha mês a mês</a>·<a href="#faturamento">Faturamento</a>·<a href="#despesas">Despesas</a>·<a href="#resultado">Resultado</a>·<a href="#socios">Sócios</a>·<a href="#cenarios">Cenários</a>
         </nav>
       </div>
 
       {/* 1. visão geral */}
       <section id="visao" style={{ scrollMarginTop: "9rem" }}>
         <dl className="st-kpis" style={{ marginTop: "1rem" }}>
+          <div className="st-kpi">
+            <dt>Caixa hoje (Financeiro)</dt>
+            <dd style={{ color: cashNow < 0 ? "var(--st-bad)" : undefined }}>{brl(cashNow)}</dd>
+            <span className="st-delta">
+              em {labels.at(-1)}: {brl(cash.at(-1) ?? cashNow)}
+            </span>
+          </div>
+          <div className="st-kpi">
+            <dt>Menor caixa no período</dt>
+            <dd style={{ color: lowest < 0 ? "var(--st-bad)" : undefined }}>{brl(lowest)}</dd>
+            <span className="st-delta">{negativeAt >= 0 ? `fica negativo em ${labels[negativeAt]}` : "o caixa não fica negativo"}</span>
+          </div>
           <div className="st-kpi">
             <dt>Faturamento projetado ({H} meses)</dt>
             <dd>{brl(t.revenue)}</dd>
@@ -192,6 +238,101 @@ export function PlanningApp({ base, scenarios, initialId, initialView }: { base:
               { label: "Despesas + impostos", color: "#dc2626", values: months.map((m) => (m.expenses + m.taxes) / 100) },
             ]}
           />
+        </article>
+      </section>
+
+      {/* planilha */}
+      <section id="planilha" style={{ scrollMarginTop: "9rem" }}>
+        <div className="st-actions" style={{ margin: "2rem 0 0.5rem", justifyContent: "space-between" }}>
+          <h2 style={{ margin: 0 }}>Planilha mês a mês</h2>
+          <button type="button" className="st-btn" data-variant="ghost" onClick={downloadCsv}>
+            Baixar para Excel (.csv)
+          </button>
+        </div>
+        <p className="st-hint" style={{ marginTop: 0 }}>
+          Começa com o caixa de hoje ({brl(cashNow)}) e soma o lucro de cada mês. Mude as hipóteses abaixo (assinantes, preços, despesas) ou lance entradas e saídas pontuais, e a planilha recalcula na hora.
+        </p>
+        <div className="st-table-wrap">
+          <table className="st-table" style={{ fontSize: "0.85rem" }}>
+            <thead>
+              <tr>
+                <th scope="col" style={{ position: "sticky", left: 0, background: "var(--st-surface, #fff)", minWidth: "13rem" }} />
+                {labels.map((l) => (
+                  <th key={l} scope="col" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    {l}
+                  </th>
+                ))}
+                <th scope="col" style={{ textAlign: "right" }}>
+                  Total
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sheet.map((r) => (
+                <tr key={r.label} style={r.strong ? { fontWeight: 700 } : undefined}>
+                  <th scope="row" style={{ position: "sticky", left: 0, background: "var(--st-surface, #fff)", fontWeight: r.strong ? 700 : 400 }}>
+                    {r.sign ? `(−) ${r.label}` : r.label}
+                  </th>
+                  {r.values.map((v, i) => (
+                    <td key={i} className="st-num" style={{ whiteSpace: "nowrap", color: (r.sign ? false : v < 0) ? "var(--st-bad)" : r.sign && !v ? "var(--st-muted, #999)" : undefined }}>
+                      {r.money ? (r.sign ? (v ? `- ${brl(v)}` : "—") : brl(v)) : v}
+                    </td>
+                  ))}
+                  <td className="st-num" style={{ whiteSpace: "nowrap" }}>
+                    {r.total == null ? "" : r.money ? (r.sign ? `- ${brl(r.total)}` : brl(r.total)) : r.total}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <article className="st-card" style={{ marginTop: "1rem" }}>
+          <h3 style={{ margin: 0 }}>Entradas e saídas pontuais</h3>
+          <p className="st-hint" style={{ margin: 0 }}>
+            Um valor que acontece uma vez só num mês: compra de equipamento, aporte, um contrato fechado, uma retirada. Saída com valor negativo. Fica no cenário, não vai para o Financeiro.
+          </p>
+          {config.oneOffs.map((o, i) => {
+            const upd = (p: Partial<typeof o>) => patch({ oneOffs: config.oneOffs.map((x, j) => (j === i ? { ...x, ...p } : x)) });
+            return (
+              <div key={o.id} className="st-actions">
+                <select className="st-input" style={{ width: "auto" }} aria-label="Mês" value={o.month} onChange={(e) => upd({ month: Number(e.target.value) })}>
+                  {labels.map((l, k) => (
+                    <option key={l} value={k + 1}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+                <input className="st-input" style={{ maxWidth: 220 }} aria-label="Descrição" value={o.name} onChange={(e) => upd({ name: e.target.value })} />
+                <select className="st-input" style={{ width: "auto" }} aria-label="Empresa" value={o.entity} onChange={(e) => upd({ entity: e.target.value })}>
+                  {base.products.map((p) => (
+                    <option key={p.slug} value={p.slug}>
+                      {p.name}
+                    </option>
+                  ))}
+                  <option value="shared">Compartilhada (rateio)</option>
+                </select>
+                <select className="st-input" style={{ width: "auto" }} aria-label="Tipo" value={o.cents < 0 ? "out" : "in"} onChange={(e) => upd({ cents: (e.target.value === "out" ? -1 : 1) * Math.abs(o.cents) })}>
+                  <option value="in">Entrada</option>
+                  <option value="out">Saída</option>
+                </select>
+                <Num label="Valor" value={reais(Math.abs(o.cents))} onChange={(v) => upd({ cents: (o.cents < 0 ? -1 : 1) * Math.abs(toCents(v || "0")) })} step={100} min={0} suffix="R$" />
+                <button type="button" className="st-linkbtn" onClick={() => patch({ oneOffs: config.oneOffs.filter((_, j) => j !== i) })}>
+                  remover
+                </button>
+              </div>
+            );
+          })}
+          <div>
+            <button
+              type="button"
+              className="st-btn"
+              data-variant="ghost"
+              onClick={() => patch({ oneOffs: [...config.oneOffs, { id: Math.random().toString(36).slice(2), entity: viewProducts.length === 1 ? viewProducts[0].slug : "shared", month: 1, name: "Novo lançamento", cents: -100000 }] })}
+            >
+              + Adicionar entrada ou saída
+            </button>
+          </div>
         </article>
       </section>
 

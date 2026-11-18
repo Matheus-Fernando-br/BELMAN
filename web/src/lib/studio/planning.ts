@@ -4,6 +4,7 @@ import { addMonths, lastDayOfMonth, monthKey, monthsBetween } from "./finance-ma
 import type { Base, ExpenseGroup, PlanBase } from "./planning-math";
 import type { StudioContext } from "./session";
 import { todayLocal } from "./scope";
+import { cashToday } from "./finance";
 
 // Dados oficiais do Studio para o Planejamento (só leitura): planos e preços,
 // despesas do Financeiro (média dos 3 últimos meses fechados) e o rateio da holding.
@@ -33,7 +34,8 @@ export async function loadPlanningBase(ctx: StudioContext): Promise<Base> {
   const from = `${baseMonths[0]}-01`;
   const to = lastDayOfMonth(baseMonths.at(-1)!);
 
-  const [{ data: plans }, { data: snaps }, { data: txs }, { data: cats }, { data: rules }] = await Promise.all([
+  const allIds = ctx.visible.map((e) => e.id);
+  const [{ data: plans }, { data: snaps }, { data: txs }, { data: cats }, { data: rules }, cashAll, ...cashProducts] = await Promise.all([
     supabase.from("product_plans").select("id,entity_id,name,price_cents,billing,subscribers,source,active,sort_order").in("entity_id", productIds).eq("active", true).order("sort_order"),
     supabase.from("product_revenue_snapshots").select("entity_id,day,subscriptions").in("entity_id", productIds).order("day", { ascending: false }).limit(20),
     supabase
@@ -45,6 +47,8 @@ export async function loadPlanningBase(ctx: StudioContext): Promise<Base> {
       .limit(5000),
     supabase.from("fin_categories").select("*").eq("type", "expense"),
     supabase.from("fin_allocation_rules").select("active,fin_allocation_shares(entity_id,percent)").eq("active", true).limit(1),
+    cashToday(allIds).catch(() => 0),
+    ...products.map((p) => cashToday([p.id]).catch(() => 0)),
   ]);
 
   // planos: catálogo oficial; sem catálogo ainda, usa o último retrato sincronizado
@@ -103,5 +107,7 @@ export async function loadPlanningBase(ctx: StudioContext): Promise<Base> {
     taxesActual,
     revenueActual,
     baseMonths,
+    cash: { consolidado: cashAll, ...Object.fromEntries(products.map((p, i) => [p.slug, cashProducts[i]])) },
+    startMonth: addMonths(current, 1),
   };
 }

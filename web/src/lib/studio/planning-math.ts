@@ -27,9 +27,15 @@ export type Base = {
   /** Receita realizada (média mensal), só para referência. */
   revenueActual: Record<string, number>;
   baseMonths: string[];
+  /** Saldo em caixa hoje (Financeiro), por produto e "consolidado" (todas as entidades visíveis). */
+  cash: Record<string, number>;
+  /** Primeiro mês projetado (AAAA-MM), o mês seguinte ao atual. */
+  startMonth: string;
 };
 
 export type Hypothetical = { id: string; entity: string; group: ExpenseGroup; name: string; monthlyCents: number };
+/** Lançamento pontual num mês da projeção: positivo = entrada, negativo = saída. "shared" é rateado. */
+export type OneOff = { id: string; entity: string; month: number; name: string; cents: number };
 export type Partner = { name: string; pct: number };
 export type Bonus = { name: string; kind: "pct" | "fixed"; value: number };
 
@@ -46,6 +52,7 @@ export type Config = {
   split: Record<string, number>; // rateio das compartilhadas (% por produto)
   partners: Partner[];
   bonuses: Bonus[];
+  oneOffs: OneOff[];
 };
 
 export const DEFAULT_CONFIG: Config = {
@@ -65,12 +72,14 @@ export const DEFAULT_CONFIG: Config = {
     { name: "Sócio 3", pct: 33.33 },
   ],
   bonuses: [],
+  oneOffs: [],
 };
 
 export function withDefaults(raw: Partial<Config> | null | undefined): Config {
   const c = { ...DEFAULT_CONFIG, ...(raw ?? {}) } as Config;
   if (![12, 24, 36].includes(c.horizon)) c.horizon = 12;
   if (!Array.isArray(c.partners) || !c.partners.length) c.partners = DEFAULT_CONFIG.partners;
+  if (!Array.isArray(c.oneOffs)) c.oneOffs = [];
   return c;
 }
 
@@ -101,7 +110,26 @@ export function expensesByGroup(base: Base, c: Config, slug: string) {
   return out;
 }
 
-export type Month = { index: number; subscribers: number; revenue: number; taxes: number; expenses: number; net: number };
+export type Month = { index: number; subscribers: number; revenue: number; taxes: number; expenses: number; extra: number; net: number };
+
+/** Lançamentos pontuais de um produto no mês m (os "shared" entram pela fatia do rateio). */
+export function oneOffsOf(base: Base, c: Config, slug: string, m: number) {
+  const share = splitOf(base, c)[slug] ?? 0;
+  return c.oneOffs.filter((o) => o.month === m && (o.entity === slug || o.entity === "shared")).reduce((s, o) => s + num(o.cents) * (o.entity === "shared" ? share : 1), 0);
+}
+
+/** Despesas por grupo mês a mês (com o aumento mensal), para a planilha. */
+export function expensesByMonth(base: Base, c: Config, slug: string) {
+  const g0 = expensesByGroup(base, c, slug);
+  const eg = 1 + num(c.expenseGrowthPct) / 100;
+  return Array.from({ length: c.horizon }, (_, i) => Object.fromEntries(EXPENSE_GROUPS.map(([g]) => [g, Math.round(g0[g] * Math.pow(eg, i))])) as Record<ExpenseGroup, number>);
+}
+
+/** Caixa projetado: saldo de hoje + lucro acumulado mês a mês. */
+export function cashProjection(months: Month[], start: number) {
+  let cash = start;
+  return months.map((m) => (cash += m.net));
+}
 
 /** Projeção mês a mês de um produto (mês 1 = próximo mês). */
 export function projectProduct(base: Base, c: Config, slug: string): Month[] {
@@ -121,7 +149,8 @@ export function projectProduct(base: Base, c: Config, slug: string): Month[] {
     }
     const taxes = (revenue * num(c.taxPct)) / 100;
     const expenses = exp0 * Math.pow(eg, m - 1);
-    months.push({ index: m, subscribers: subs, revenue: Math.round(revenue), taxes: Math.round(taxes), expenses: Math.round(expenses), net: Math.round(revenue - taxes - expenses) });
+    const extra = Math.round(oneOffsOf(base, c, slug, m));
+    months.push({ index: m, subscribers: subs, revenue: Math.round(revenue), taxes: Math.round(taxes), expenses: Math.round(expenses), extra, net: Math.round(revenue - taxes - expenses) + extra });
   }
   return months;
 }
@@ -134,12 +163,13 @@ export function sumMonths(list: Month[][]): Month[] {
     revenue: list.reduce((s, l) => s + (l[i]?.revenue ?? 0), 0),
     taxes: list.reduce((s, l) => s + (l[i]?.taxes ?? 0), 0),
     expenses: list.reduce((s, l) => s + (l[i]?.expenses ?? 0), 0),
+    extra: list.reduce((s, l) => s + (l[i]?.extra ?? 0), 0),
     net: list.reduce((s, l) => s + (l[i]?.net ?? 0), 0),
   }));
 }
 
 export function totals(months: Month[]) {
-  const t = months.reduce((a, m) => ({ revenue: a.revenue + m.revenue, taxes: a.taxes + m.taxes, expenses: a.expenses + m.expenses, net: a.net + m.net }), { revenue: 0, taxes: 0, expenses: 0, net: 0 });
+  const t = months.reduce((a, m) => ({ revenue: a.revenue + m.revenue, taxes: a.taxes + m.taxes, expenses: a.expenses + m.expenses, extra: a.extra + m.extra, net: a.net + m.net }), { revenue: 0, taxes: 0, expenses: 0, extra: 0, net: 0 });
   return { ...t, margin: t.revenue > 0 ? (t.net / t.revenue) * 100 : null };
 }
 

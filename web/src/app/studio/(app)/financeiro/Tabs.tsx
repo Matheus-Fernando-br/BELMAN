@@ -8,7 +8,7 @@ const TABS = [
   { href: "/studio/financeiro", label: "Visão geral" },
   { href: "/studio/financeiro/lancamentos", label: "Lançamentos" },
   { href: "/studio/financeiro/fluxo", label: "Fluxo de caixa" },
-  { href: "/studio/financeiro/resultados", label: "Resultados" },
+  { href: "/studio/financeiro/resultados", label: "Resultados (DRE)" },
   { href: "/studio/financeiro/orcamento", label: "Orçamento" },
   { href: "/studio/financeiro/recorrentes", label: "Recorrentes" },
   { href: "/studio/financeiro/aportes", label: "Aportes" },

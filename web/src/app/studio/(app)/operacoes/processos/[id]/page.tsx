@@ -14,6 +14,7 @@ export default async function WikiDetail({ params, searchParams }: { params: Pro
   const supabase = await createClient();
   const { data: p } = await supabase.from("wiki_pages").select("*").eq("id", id).maybeSingle();
   if (!p) notFound();
+  const { data: linked } = await supabase.from("tasks").select("id,title,status,due_date,recurrence").eq("wiki_page_id", id).neq("status", "done").order("due_date").limit(50);
   return (
     <>
       <div className="st-page-head">
@@ -44,6 +45,24 @@ export default async function WikiDetail({ params, searchParams }: { params: Pro
                 {para}
               </p>
             ))}
+        </article>
+      )}
+      {!!linked?.length && (
+        <article className="st-card" style={{ maxWidth: "52rem" }}>
+          <h2>Tarefas e rotinas que seguem este processo</h2>
+          <ul className="st-list">
+            {linked.map((t) => (
+              <li key={t.id}>
+                <Link className="st-grow" href={`/studio/operacoes/tarefas?editar=${t.id}`}>
+                  {t.title}
+                </Link>
+                <small>
+                  {t.recurrence ? "rotina · " : ""}
+                  {t.due_date ? br(t.due_date) : "sem prazo"}
+                </small>
+              </li>
+            ))}
+          </ul>
         </article>
       )}
     </>

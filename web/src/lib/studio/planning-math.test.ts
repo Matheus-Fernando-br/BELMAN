@@ -1,4 +1,4 @@
-import { distribute, expensesByGroup, projectProduct, splitOf, sumMonths, totals, withDefaults, type Base } from "./planning-math";
+import { cashProjection, distribute, expensesByMonth, expensesByGroup, projectProduct, splitOf, sumMonths, totals, withDefaults, type Base } from "./planning-math";
 
 const base: Base = {
   products: [
@@ -16,6 +16,8 @@ const base: Base = {
   taxesActual: {},
   revenueActual: {},
   baseMonths: [],
+  cash: { consolidado: 100000 },
+  startMonth: "2026-12",
 };
 
 describe("planejamento", () => {
@@ -53,6 +55,21 @@ describe("planejamento", () => {
     expect(m.taxes).toBe(2000);
     expect(m.expenses).toBe(5000 + 10000);
     expect(m.net).toBe(20000 - 2000 - 15000);
+  });
+  it("lançamento pontual entra só no mês dele e o caixa acumula", () => {
+    const c = withDefaults({ growthPct: 0, churnPct: 0, taxPct: 0, expenseGrowthPct: 0, oneOffs: [{ id: "o", entity: "shared", month: 2, name: "Notebook", cents: -10000 }] });
+    const of = projectProduct(base, c, "obra-facil");
+    expect(of[0].extra).toBe(0);
+    expect(of[1].extra).toBe(-5000);
+    expect(of[1].net).toBe(of[0].net - 5000);
+    const cash = cashProjection(of.slice(0, 2), 1000);
+    expect(cash).toEqual([1000 + of[0].net, 1000 + of[0].net + of[1].net]);
+  });
+  it("despesas por grupo crescem mês a mês na planilha", () => {
+    const c = withDefaults({ expenseGrowthPct: 10, horizon: 12 });
+    const rows = expensesByMonth(base, c, "obra-facil");
+    expect(rows).toHaveLength(12);
+    expect(rows[1].tecnologia).toBe(11000);
   });
   it("distribui: reserva, gratificações e sócios; prejuízo não distribui", () => {
     const c = withDefaults({

@@ -21,7 +21,7 @@ export async function requireScope(raw?: string | string[]): Promise<ScopeContex
 }
 
 /** Opções dos campos de referência (responsável, projeto, cliente, versão, campanha). */
-export async function loadRefs(scopeIds: string[], needs: ("profiles" | "projects" | "customers" | "releases" | "campaigns" | "contacts")[]) {
+export async function loadRefs(scopeIds: string[], needs: ("profiles" | "projects" | "customers" | "releases" | "campaigns" | "contacts" | "wiki_pages")[]) {
   const supabase = await createClient();
   const out: Partial<Record<(typeof needs)[number], Option[]>> = {};
   await Promise.all(
@@ -41,6 +41,9 @@ export async function loadRefs(scopeIds: string[], needs: ("profiles" | "project
       } else if (n === "contacts") {
         const { data } = await supabase.from("contacts").select("id,name,trade_name").in("entity_id", scopeIds).order("name").limit(1000);
         out.contacts = (data ?? []).map((p) => [p.id, p.trade_name ? `${p.trade_name} (${p.name})` : p.name] as const);
+      } else if (n === "wiki_pages") {
+        const { data } = await supabase.from("wiki_pages").select("id,title,category").in("entity_id", scopeIds).order("category").order("title").limit(500);
+        out.wiki_pages = (data ?? []).map((p) => [p.id, `${p.category}: ${p.title}`] as const);
       } else if (n === "campaigns") {
         const { data } = await supabase.from("campaigns").select("id,name").in("entity_id", scopeIds).order("name");
         out.campaigns = (data ?? []).map((p) => [p.id, p.name] as const);

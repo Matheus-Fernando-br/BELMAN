@@ -26,6 +26,7 @@ function clean(raw: unknown): Config {
     taxPct: n(c.taxPct, 0, 60, 6),
     reservePct: n(c.reservePct, 0, 100, 20),
     hypothetical: (c.hypothetical ?? []).slice(0, 60).map((h) => ({ ...h, name: String(h.name ?? "").slice(0, 80), monthlyCents: n(h.monthlyCents, 0, 1e11, 0) })),
+    oneOffs: (c.oneOffs ?? []).slice(0, 120).map((o) => ({ id: String(o.id ?? "").slice(0, 20), entity: String(o.entity ?? "shared").slice(0, 40), month: Math.round(n(o.month, 1, 36, 1)), name: String(o.name ?? "").slice(0, 80), cents: Math.round(n(o.cents, -1e11, 1e11, 0)) })),
     partners: (c.partners ?? []).slice(0, 10).map((p) => ({ name: String(p.name ?? "").slice(0, 60), pct: n(p.pct, 0, 100, 0) })),
     bonuses: (c.bonuses ?? []).slice(0, 10).map((b) => ({ name: String(b.name ?? "").slice(0, 60), kind: b.kind === "fixed" ? "fixed" : "pct", value: n(b.value, 0, 1e11, 0) })),
   };

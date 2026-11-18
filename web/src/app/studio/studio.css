@@ -295,7 +295,13 @@
   max-width: 1320px;
   padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1rem, 3vw, 2rem) 4rem;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
+}
+
+/* tabelas largas rolam dentro do cartão, sem alargar a página */
+.st-content > * {
+  min-width: 0;
 }
 
 .st-page-head {
