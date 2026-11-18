@@ -7,6 +7,7 @@ import { signOut } from "@/app/studio/(auth)/actions";
 import { Mark, Wordmark } from "@/components/Logo";
 import type { FilterOption } from "@/lib/studio/filter";
 import { Icon, type IconName } from "./Icon";
+import { Motion } from "./Motion";
 
 type NavItem = { href: string; label: string; icon: IconName };
 
@@ -84,6 +85,7 @@ function ShellInner({ user, products, filter, children }: ShellProps) {
 
   return (
     <div className="st-shell" data-menu={open ? "open" : "closed"}>
+      <Motion />
       <aside
         className="st-side"
         id="studio-menu"
@@ -98,7 +100,7 @@ function ShellInner({ user, products, filter, children }: ShellProps) {
           </span>
         </Link>
 
-        <nav className="st-nav st-nav-group" aria-label="Áreas">
+        <nav className="st-nav st-nav-group" aria-label="Áreas" data-indicator>
           {NAV.map((item) => (
             <Link key={item.href} href={withFilter(item.href)} aria-current={isCurrent(item.href) ? "page" : undefined}>
               <Icon name={item.icon} />
@@ -138,8 +140,12 @@ function ShellInner({ user, products, filter, children }: ShellProps) {
           </Link>
         </nav>
 
+        <Mark className="st-side-mark" strokeWidth={3} radius={8} />
         <div className="st-side-foot">
           <div className="st-user">
+            <span className="st-avatar" aria-hidden="true">
+              {(user.name || user.email).trim().charAt(0).toUpperCase()}
+            </span>
             <strong>{user.name}</strong>
             <span>{user.role}</span>
           </div>

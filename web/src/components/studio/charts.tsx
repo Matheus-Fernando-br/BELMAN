@@ -167,6 +167,8 @@ export function LineChart({ title, labels, series, money = true }: { title: stri
           {series.map((s) => (
             <g key={s.label}>
               <polyline
+                className={s.dashed ? "st-fade" : "st-draw"}
+                pathLength={s.dashed ? undefined : 1}
                 fill="none"
                 stroke={s.color}
                 strokeWidth="2"
@@ -175,7 +177,7 @@ export function LineChart({ title, labels, series, money = true }: { title: stri
                 strokeDasharray={s.dashed ? "5 4" : undefined}
                 points={s.values.map((v, i) => `${x(i)},${y(v)}`).join(" ")}
               />
-              <circle cx={x(last)} cy={y(s.values[last])} r="4.5" fill={s.color} stroke="#fff" strokeWidth="2" />
+              <circle className="st-pop" cx={x(last)} cy={y(s.values[last])} r="4.5" fill={s.color} stroke="#fff" strokeWidth="2" />
               {index !== null && <circle cx={x(index)} cy={y(s.values[index])} r="4.5" fill={s.color} stroke="#fff" strokeWidth="2" />}
             </g>
           ))}
@@ -248,7 +250,7 @@ export function StackedColumns({ title, labels, series, money = true }: { title:
                   const r = isTop ? Math.min(4, h) : 0;
                   const x0 = x(i) - barW / 2;
                   const d = `M${x0},${top + h} V${top + r} Q${x0},${top} ${x0 + r},${top} H${x0 + barW - r} Q${x0 + barW},${top} ${x0 + barW},${top + r} V${top + h} Z`;
-                  return <path key={s.label} d={d} fill={s.color} />;
+                  return <path key={s.label} className="st-bar" style={{ "--i": i } as React.CSSProperties} d={d} fill={s.color} />;
                 })}
                 {i === labels.length - 1 && (
                   <text x={x(i)} y={base - scale(totals[i]) - 8} textAnchor="middle" fontSize="13" fontWeight="600" fill="#1b1b1b">

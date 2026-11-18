@@ -33,11 +33,14 @@ export function Mark({
   strokeWidth = 4,
   radius = 9,
   title,
+  animated = false,
 }: {
   className?: string;
   strokeWidth?: number;
   radius?: number;
   title?: string;
+  /** Desenha as linhas e acende os pontos em sequência (classes mk-line / mk-node). */
+  animated?: boolean;
 }) {
   return (
     <svg
@@ -49,13 +52,20 @@ export function Mark({
       focusable="false"
     >
       <g stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" fill="none">
-        {edges.map(([a, b]) => (
-          <line key={`${a}-${b}`} x1={nodes[a].x} y1={nodes[a].y} x2={nodes[b].x} y2={nodes[b].y} />
+        {edges.map(([a, b], i) => (
+          <line
+            key={`${a}-${b}`}
+            className={animated ? "mk-line" : undefined}
+            pathLength={animated ? 1 : undefined}
+            style={animated ? ({ "--i": i } as React.CSSProperties) : undefined}
+            x1={nodes[a].x} y1={nodes[a].y} x2={nodes[b].x} y2={nodes[b].y} />
         ))}
       </g>
-      {Object.entries(nodes).map(([name, n]) => (
+      {Object.entries(nodes).map(([name, n], i) => (
         <circle
           key={name}
+          className={animated ? "mk-node" : undefined}
+          style={animated ? ({ "--i": i } as React.CSSProperties) : undefined}
           cx={n.x}
           cy={n.y}
           r={n.hollow ? radius + 1 : radius}
