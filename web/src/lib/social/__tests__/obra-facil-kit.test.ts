@@ -12,9 +12,10 @@ const brand = { handle: "@obra.facil.app", palette: { primary: "#C2570C", accent
 const dims = (png: Buffer) => ({ w: png.readUInt32BE(16), h: png.readUInt32BE(20) });
 
 describe("kit visual do Obra Fácil", () => {
-  it("só a entidade obra-facil tem kit", () => {
+  it("Obra Fácil e FINC têm kit; os outros usam os templates genéricos", () => {
     expect(temKit("obra-facil")).toBe(true);
-    expect(temKit("finc")).toBe(false);
+    expect(temKit("finc")).toBe(true);
+    expect(temKit("bellman")).toBe(false);
   });
 
   it("normaliza campos: padrão quando vazio/inválido, corta texto longo", () => {
@@ -73,4 +74,37 @@ describe("kit visual do Obra Fácil", () => {
     }
     expect(framesFor("carousel", brand, { carousel: null }, "obra-facil")).toEqual([]);
   }, 120_000);
+});
+
+describe("kit visual da FINC", () => {
+  it("desenha os 6 modelos na identidade da FINC (verde, logo oficial) e os posts automáticos", async () => {
+    const { arteKit, KITS } = await import("@shared/social-templates/obra-facil");
+    const { modelosDo } = await import("@shared/social-templates/obra-facil-modelos");
+    const modelos = modelosDo("finc");
+    expect(modelos.find((m) => m.id === "icone")!.campos.find((c) => c.id === "titulo")!.rotulo).toContain("verde");
+    for (const m of modelos) {
+      const frame = arteKit("finc", { modelo: m.id, formato: "quadrado", campos: Object.fromEntries(m.campos.map((c) => [c.id, c.padrao])) });
+      expect(JSON.stringify(frame.node)).toContain("#00924C");
+      expect(JSON.stringify(frame.node)).not.toContain("#F57C00");
+      const png = await renderPng(frame);
+      if (process.env.ARTES_DIR) (await import("node:fs")).writeFileSync(`${process.env.ARTES_DIR}/finc-${m.id}.png`, png);
+      expect(dims(png)).toEqual({ w: 1080, h: 1080 });
+    }
+    const fincBrand = { ...brand, handle: "@plataforma.finc" };
+    const post = KITS.finc.post(fincBrand, { kicker: "Dica", title: "Nota fiscal *em dia*", body: "Sem complicação.", alt_text: "x" } as never);
+    expect(JSON.stringify(post[0].node)).toContain("#00924C");
+    // o Obra Fácil continua laranja depois de desenhar a FINC
+    const of = obraFacilPost(brand, { kicker: "Dica", title: "Obra *em dia*", body: "x", alt_text: "x" } as never);
+    expect(JSON.stringify(of[0].node)).toContain("#F57C00");
+    if (process.env.ARTES_DIR) (await import("node:fs")).writeFileSync(`${process.env.ARTES_DIR}/finc-post.png`, await renderPng(post[0]));
+  }, 60000);
+});
+
+describe("textos do kit por produto", () => {
+  it("a FINC não herda os exemplos do Obra Fácil", async () => {
+    const { modelosDo } = await import("@shared/social-templates/obra-facil-modelos");
+    const txt = JSON.stringify(modelosDo("finc").map((m) => [m.descricao, m.campos]));
+    expect(txt).not.toMatch(/capacete|obras|laranja|profissionalizar/i);
+    expect(JSON.stringify(modelosDo("obra-facil"))).toMatch(/capacete/);
+  });
 });

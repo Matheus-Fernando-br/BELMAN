@@ -1,4 +1,4 @@
-// Kit visual do Obra Fácil: lista de modelos de arte, formatos e campos.
+// Kits visuais dos produtos (Obra Fácil, FINC): lista de modelos de arte, formatos, campos e temas.
 // Arquivo leve (sem imagens embutidas) para o formulário da aba "Artes" no navegador.
 // O desenho de cada modelo fica em ./obra-facil.ts (só no servidor).
 
@@ -108,9 +108,49 @@ export const MODELOS: ModeloInfo[] = [
   },
 ];
 
+/** Tema de cada kit (cores e textos); as imagens da marca ficam no arquivo do desenho. */
+export type TemaInfo = { slug: string; nome: string; destaque: string; nomeDestaque: string; escuro: string; escuroGrad: string; fundoClaro: string; cinza: string; slogan: string };
+export const TEMAS: Record<string, TemaInfo> = {
+  "obra-facil": { slug: "obra-facil", nome: "Obra Fácil", destaque: COR.laranja, nomeDestaque: "laranja", escuro: COR.grafite, escuroGrad: "#383838", fundoClaro: COR.fundoClaro, cinza: COR.cinza, slogan: "Seu trabalho mais profissional." },
+  finc: { slug: "finc", nome: "FINC", destaque: "#00924C", nomeDestaque: "verde", escuro: "#2B2A2C", escuroGrad: "#363537", fundoClaro: "#F5F7F6", cinza: "#E3E8E5", slogan: "Simplifique." },
+};
+
+/** Textos e ícones iniciais de cada modelo, por kit (o Obra Fácil usa os da lista acima). */
+const PADROES: Record<string, Partial<Record<ModeloId, Record<string, string>>>> = {
+  finc: {
+    foto: { titulo: "Nota fiscal em dia\n*é tranquilidade.*" },
+    icone: { titulo: "Controle\n*seu caixa*", icone: "grafico" },
+    dicas: { numero: "3", texto: "passos para emitir\nsua *nota fiscal*", icone: "lampada" },
+    tres: { icone1: "clientes", rotulo1: "Clientes", icone2: "orcamento", rotulo2: "Notas fiscais", icone3: "dinheiro", rotulo3: "Boletos", titulo: "Notas, boletos\ne *caixa*" },
+    aviso: { etiqueta: "NOVIDADE", titulo: "Emissão *automática*\nde notas fiscais", texto: "Integrada com bancos e plataformas de e-commerce, por um preço justo." },
+  },
+};
+
 /** Entidades (slug) que têm kit visual próprio: aba "Artes" e posts automáticos na identidade. */
-export const KIT_SLUGS = ["obra-facil"] as const;
-export const temKit = (slug: string) => (KIT_SLUGS as readonly string[]).includes(slug);
+export const KIT_SLUGS = Object.keys(TEMAS);
+export const temKit = (slug: string) => KIT_SLUGS.includes(slug);
+export const temaDo = (slug: string) => TEMAS[slug] ?? TEMAS["obra-facil"];
+
+/** Modelos com os textos iniciais e o nome da cor de destaque do kit. */
+export function modelosDo(slug: string): ModeloInfo[] {
+  const t = temaDo(slug);
+  const p = PADROES[t.slug] ?? {};
+  return MODELOS.map((m) => ({
+    ...m,
+    descricao:
+      t.slug === "obra-facil"
+        ? m.descricao
+        : m.descricao
+            .replaceAll("laranja", t.nomeDestaque)
+            .replace("capacete ao fundo", "símbolo ao fundo")
+            .replace(/, como "[^"]*"/, ""),
+    campos: m.campos.map((c) => {
+      const rotulo = c.rotulo.replace("para o laranja", `para o ${t.nomeDestaque}`);
+      const padrao = p[m.id]?.[c.id];
+      return (padrao === undefined || c.tipo === "sim-nao" ? { ...c, rotulo } : { ...c, rotulo, padrao }) as Campo;
+    }),
+  }));
+}
 
 /** Valores do formulário já validados: cada campo do modelo, com o padrão quando vier vazio ou inválido. */
 export function normalizarCampos(modelo: ModeloInfo, entrada: Record<string, unknown>): Record<string, string | boolean> {

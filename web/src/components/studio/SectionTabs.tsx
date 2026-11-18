@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-type Tab = { href: string; label: string };
+type Tab = { href: string; label: string; group?: string };
 
 function Inner({ tabs, label }: { tabs: Tab[]; label: string }) {
   const pathname = usePathname();
@@ -12,12 +12,20 @@ function Inner({ tabs, label }: { tabs: Tab[]; label: string }) {
   const root = tabs[0]?.href;
   return (
     <nav aria-label={label} className="st-tabs">
-      {tabs.map((t) => {
+      {tabs.map((t, i) => {
         const active = t.href === root ? pathname === t.href : pathname.startsWith(t.href);
+        const newGroup = t.group && t.group !== tabs[i - 1]?.group;
         return (
-          <Link key={t.href} href={e ? `${t.href}?e=${e}` : t.href} aria-current={active ? "page" : undefined}>
-            {t.label}
-          </Link>
+          <span key={t.href} className="st-tab-wrap">
+            {newGroup && (
+              <span className="st-tab-group" aria-hidden="true">
+                {t.group}
+              </span>
+            )}
+            <Link href={e ? `${t.href}?e=${e}` : t.href} aria-current={active ? "page" : undefined}>
+              {t.label}
+            </Link>
+          </span>
         );
       })}
     </nav>

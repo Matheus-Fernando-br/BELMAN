@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/studio/(auth)/actions";
 import { Mark, Wordmark } from "@/components/Logo";
 import type { FilterOption } from "@/lib/studio/filter";
@@ -25,6 +25,8 @@ export type ShellProps = {
   user: { name: string; email: string; role: string };
   products: { slug: string; name: string; color: string; adminUrl: string | null }[];
   filter: FilterOption[];
+  /** Números ao lado dos itens do menu (ex.: chamados em aberto para Sócio/Admin). */
+  badges?: Record<string, number>;
   children: React.ReactNode;
 };
 
@@ -58,7 +60,49 @@ function filterTarget(pathname: string, slug: string, consolidated: string) {
   return `${base}?e=${slug}`;
 }
 
-function ShellInner({ user, products, filter, children }: ShellProps) {
+/** Seletor da empresa visualizada (Consolidado, FINC, Obra Fácil...) no topo do menu lateral. */
+function CompanySwitcher({ options, current, hrefFor }: { options: FilterOption[]; current: string; hrefFor: (slug: string) => string }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const cur = options.find((o) => o.slug === current) ?? options[0];
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  return (
+    <div className="st-switch" ref={box} data-open={open || undefined}>
+      <span className="st-switch-label">Visualizando</span>
+      <button type="button" className="st-switch-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        {cur.slug === "consolidado" ? <Icon name="building" /> : <span className="st-dot" style={{ background: cur.color }} aria-hidden="true" />}
+        <span className="st-grow">{cur.label}</span>
+        <Icon name="chevron" />
+      </button>
+      <ul role="listbox" aria-label="Empresa visualizada" className="st-switch-list">
+        {options.map((o) => (
+          <li key={o.slug} role="option" aria-selected={o.slug === cur.slug}>
+            <Link href={hrefFor(o.slug)} scroll={false} onClick={() => setOpen(false)} aria-current={o.slug === cur.slug ? "true" : undefined}>
+              {o.slug === "consolidado" ? <Icon name="building" /> : <span className="st-dot" style={{ background: o.color }} aria-hidden="true" />}
+              <span className="st-grow">
+                {o.label}
+                <small>{o.slug === "consolidado" ? "todas as empresas juntas" : o.slug === "compartilhado" ? "custos divididos entre todos" : "só esta empresa"}</small>
+              </span>
+              {o.slug === cur.slug && <Icon name="check" />}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ShellInner({ user, products, filter, badges = {}, children }: ShellProps) {
   const pathname = usePathname();
   const params = useSearchParams();
   const router = useRouter();
@@ -75,6 +119,7 @@ function ShellInner({ user, products, filter, children }: ShellProps) {
   const deep = seg.some((x) => UUID_SEG.test(x) || x === "novo");
   const withFilter = (href: string) => (params.get("e") ? `${href}?e=${params.get("e")}` : href);
   const isCurrent = (href: string) => (href === "/studio" ? pathname === href : pathname.startsWith(href));
+  const area = [...NAV, { href: "/studio/configuracoes", label: "Configurações" }, { href: "/studio/produtos", label: "Produtos" }].find((n) => isCurrent(n.href));
 
   useEffect(() => {
     if (!open) return;
@@ -100,11 +145,18 @@ function ShellInner({ user, products, filter, children }: ShellProps) {
           </span>
         </Link>
 
+        {showFilter && <CompanySwitcher options={options} current={current} hrefFor={(slug) => filterTarget(pathname, slug, consolidated)} />}
+
         <nav className="st-nav st-nav-group" aria-label="Áreas" data-indicator>
           {NAV.map((item) => (
             <Link key={item.href} href={withFilter(item.href)} aria-current={isCurrent(item.href) ? "page" : undefined}>
               <Icon name={item.icon} />
               {item.label}
+              {!!badges[item.href] && (
+                <span className="st-badge" aria-label={`${badges[item.href]} em aberto`}>
+                  {badges[item.href]}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -175,22 +227,22 @@ function ShellInner({ user, products, filter, children }: ShellProps) {
               ← Voltar
             </button>
           )}
-          {showFilter && (
-            <nav aria-label="Filtro global">
-              <ul role="list" className="st-filter">
-                {options.map((o) => (
-                  <li key={o.slug}>
-                    <Link href={filterTarget(pathname, o.slug, consolidated)} aria-current={current === o.slug ? "true" : undefined} scroll={false}>
-                      {o.slug !== "consolidado" && (
-                        <span className="st-dot" style={{ background: o.color }} aria-hidden="true" />
-                      )}
-                      {o.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          )}
+          <p className="st-crumb">
+            <span>{area?.label ?? "Studio"}</span>
+            {showFilter && (
+              <>
+                <span aria-hidden="true">/</span>
+                <span className="st-crumb-company">
+                  {current !== "consolidado" && <span className="st-dot" style={{ background: options.find((o) => o.slug === current)?.color }} aria-hidden="true" />}
+                  {options.find((o) => o.slug === current)?.label}
+                </span>
+              </>
+            )}
+          </p>
+          <Link className="st-quick" href="/studio/desenvolvimento/chamados?novo=1">
+            <Icon name="chat" />
+            <span>Sugerir melhoria</span>
+          </Link>
         </header>
         <main id="conteudo" tabIndex={-1} className="st-content">
           {children}

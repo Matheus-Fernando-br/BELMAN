@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { FORMATOS, ICONES, MODELOS, type Campo, type FormatoArte, type ModeloId } from "@shared/social-templates/obra-facil-modelos";
+import { FORMATOS, ICONES, modelosDo, type Campo, type FormatoArte, type ModeloId, type ModeloInfo } from "@shared/social-templates/obra-facil-modelos";
 import { gerarArteAction, type ArteResult } from "./actions";
 
 type Valores = Record<string, string | boolean>;
-const padroes = (id: ModeloId): Valores => Object.fromEntries(MODELOS.find((m) => m.id === id)!.campos.map((c) => [c.id, c.padrao]));
+const padroes = (modelos: ModeloInfo[], id: ModeloId): Valores => Object.fromEntries(modelos.find((m) => m.id === id)!.campos.map((c) => [c.id, c.padrao]));
 
 /** Reduz a foto a 1440 px (lado maior) em JPEG, no navegador, antes de enviar. */
 async function reduzirFoto(file: File): Promise<string> {
@@ -57,15 +57,16 @@ function CampoInput({ campo, valor, onChange }: { campo: Campo; valor: string | 
 }
 
 export function ArtesForm({ slug }: { slug: string }) {
+  const MODELOS = useMemo(() => modelosDo(slug), [slug]);
   const [modelo, setModelo] = useState<ModeloId>("icone");
   const [formato, setFormato] = useState<FormatoArte>("quadrado");
-  const [valores, setValores] = useState<Valores>(() => padroes("icone"));
+  const [valores, setValores] = useState<Valores>(() => padroes(MODELOS, "icone"));
   const [foto, setFoto] = useState<string | null>(null);
   const [fotoErro, setFotoErro] = useState("");
   const [arte, setArte] = useState<ArteResult | null>(null);
   const [gerando, startTransition] = useTransition();
   const ultimo = useRef(0);
-  const info = useMemo(() => MODELOS.find((m) => m.id === modelo)!, [modelo]);
+  const info = useMemo(() => MODELOS.find((m) => m.id === modelo)!, [MODELOS, modelo]);
 
   // Prévia automática: espera a pessoa parar de digitar (0,7 s) e descarta respostas antigas.
   useEffect(() => {
@@ -98,7 +99,7 @@ export function ArtesForm({ slug }: { slug: string }) {
                   checked={modelo === m.id}
                   onChange={() => {
                     setModelo(m.id);
-                    setValores(padroes(m.id));
+                    setValores(padroes(MODELOS, m.id));
                   }}
                 />
                 <span>
