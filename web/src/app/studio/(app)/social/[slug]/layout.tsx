@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { temKit } from "@shared/social-templates/obra-facil-modelos";
 import { SectionTabs } from "@/components/studio/SectionTabs";
 import { ACCOUNT_STATUS } from "@/lib/social/labels";
 import { loadAccount, requireWorkspace } from "@/lib/social/server";
@@ -34,6 +35,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
         tabs={[
           { href: b, label: "Posts" },
           { href: `${b}/calendario`, label: "Calendário" },
+          ...(temKit(slug) ? [{ href: `${b}/artes`, label: "Artes" }] : []),
           { href: `${b}/automatico`, label: "Automático" },
           { href: `${b}/conexao`, label: "Conexão" },
         ]}

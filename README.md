@@ -74,11 +74,12 @@ O Studio lê métricas e pagamentos dos produtos por um canal **assinado e cifra
 
 ## Redes Sociais (`/studio/social`)
 
-Por produto (Obra Fácil, FINC…), 4 abas:
+Por produto (Obra Fácil, FINC…), 4 abas (5 no Obra Fácil, com **Artes**):
 
 | Aba | Para quê |
 | --- | --- |
 | **Posts** | Criar um post agora (tema opcional), ver o que está para revisar, agendado e publicado (com alcance e curtidas). Abrir um post: editar legenda, hashtags e textos das imagens, mudar a data, aprovar, pedir para a IA refazer. |
+| **Artes** (só Obra Fácil) | Artes avulsas na identidade visual do app (laranja #F57C00, grafite #2D2D2D, Montserrat, capacete em marca-d'água, faixas diagonais e o slogan): 6 modelos (logotipo, foto com frase, título com ícone, número + texto, três itens com ícones, aviso/novidade) em post quadrado, retrato ou story. Prévia na hora e botão **Baixar PNG**; `*asteriscos*` deixam o trecho em laranja. Nada é salvo no servidor. |
 | **Calendário** | Mês/semana; arrastar um post para outro dia muda a data; “+” cria um post naquele dia. |
 | **Automático** | Liga/desliga, dias, horário, carrossel ou imagem única, e se você revisa antes (padrão) ou publica sozinho. Embaixo, o estilo da marca que a IA segue. |
 | **Conexão** | O token do Instagram (colar/trocar quando vencer; aviso 10 dias antes) e a chave da IA. Os dois ficam cifrados e nunca voltam para a tela. |
@@ -88,4 +89,5 @@ Por produto (Obra Fácil, FINC…), 4 abas:
 - **Segurança:** token do Instagram e chave da IA cifrados (AES-256-GCM, chave derivada da `STUDIO_ENCRYPTION_KEY`) no schema `studio_private`, sem acesso do navegador; auditoria sem segredos. Só APIs oficiais da Meta: nada de curtir, seguir, comentar em perfis de terceiros, DM em massa ou login no instagram.com.
 - **Quem escreve os textos:** sem chave da Anthropic, uma tarefa agendada do Claude (plano do usuário, sem custo por post) roda de hora em hora, das 7h às 23h, pega os posts em `draft` e grava os textos; o site desenha as imagens em seguida. Com a chave colada em Conexão, o próprio site escreve na hora (cobrado por uso, centavos de dólar por post; o gasto vai para o Financeiro). Vercel e Supabase no plano grátis.
 - **Banco:** [`0009_social.sql`](web/supabase/migrations/0009_social.sql) e [`0010_social_simple.sql`](web/supabase/migrations/0010_social_simple.sql). Código: [`web/src/lib/social`](web/src/lib/social) e [`shared/social`](shared/social).
+- **Kit visual por produto:** o Obra Fácil tem desenho próprio ([`shared/social-templates/obra-facil.ts`](shared/social-templates/obra-facil.ts)); os posts automáticos dele (carrossel, imagem única e stories) já saem nessa identidade. Os outros produtos seguem os templates genéricos com a paleta do estilo da marca. Para dar kit a outro produto: um desenho novo em `KITS` e o slug em `KIT_SLUGS` ([`obra-facil-modelos.ts`](shared/social-templates/obra-facil-modelos.ts)). Fonte Montserrat (OFL) embutida; ícones do Ionicons (MIT).
 - **Vídeo (Reels) fica para depois:** a versão com worker (Remotion, FFmpeg, voz e legendas) está guardada no branch `social-worker-video`.

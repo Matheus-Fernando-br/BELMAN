@@ -7,7 +7,7 @@ import { FONT_DATA } from "./fonts-data";
 
 // Satori (JSX → SVG) + resvg (SVG → PNG) + sharp (PNG → JPEG q92, sem metadados).
 
-type Font = { name: string; data: Buffer; weight: 400 | 600 | 700 | 800; style: "normal" };
+type Font = { name: string; data: Buffer; weight: 400 | 500 | 600 | 700 | 800; style: "normal" };
 let fonts: Font[] | null = null;
 function loadFonts() {
   const f = (name: string, file: string, weight: Font["weight"]): Font => ({ name, data: Buffer.from(FONT_DATA[file], "base64"), weight, style: "normal" });
@@ -19,6 +19,11 @@ function loadFonts() {
     f("Manrope", "manrope-latin-400-normal.woff", 400),
     f("Manrope", "manrope-latin-700-normal.woff", 700),
     f("Manrope", "manrope-latin-800-normal.woff", 800),
+    // kit visual do Obra Fácil
+    f("Montserrat", "montserrat-latin-500-normal.woff", 500),
+    f("Montserrat", "montserrat-latin-600-normal.woff", 600),
+    f("Montserrat", "montserrat-latin-700-normal.woff", 700),
+    f("Montserrat", "montserrat-latin-800-normal.woff", 800),
   ];
   return fonts;
 }
@@ -52,6 +57,11 @@ async function toPng(node: Node, width: number, height: number) {
 }
 
 export type Rendered = { jpeg: Buffer; preview: Buffer; width: number; height: number; name: string };
+
+/** Uma arte avulsa em PNG (aba "Artes"): sem perda, pronta para baixar. */
+export async function renderPng(frame: Frame) {
+  return toPng(frame.node, frame.width, frame.height);
+}
 
 export async function renderFrames(frames: Frame[]): Promise<Rendered[]> {
   const out: Rendered[] = [];

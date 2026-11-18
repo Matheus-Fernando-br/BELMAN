@@ -2,16 +2,19 @@ import "server-only";
 import type { CarouselCopy, PostCopy, StoryCopy } from "@shared/social/copy";
 import { validateCarousel, validateImage } from "@shared/social/media-rules";
 import { carouselClassic, postSingle, storyFrames, type Brand, type Frame } from "@shared/social-templates/index";
+import { KITS } from "@shared/social-templates/obra-facil";
 import { BUCKET, log, sb, setPost } from "./db";
 import { renderFrames } from "./images";
 import { templateBrand, type Job } from "./brand";
 
 type Asset = { post_id: string; entity_id: string; idx: number; kind: string; storage_path: string; mime: string; width: number; height: number; bytes: number };
 
-function framesFor(format: string, brand: Brand, copy: Record<string, unknown>): Frame[] {
-  if (format === "carousel" && copy.carousel) return carouselClassic(brand, copy.carousel as CarouselCopy);
-  if (format === "post" && copy.post) return postSingle(brand, copy.post as PostCopy);
-  if (format === "story" && copy.story) return storyFrames(brand, copy.story as StoryCopy);
+/** Escolhe o desenho: o kit visual da entidade (ex.: Obra Fácil) ou os templates genéricos da paleta. */
+export function framesFor(format: string, brand: Brand, copy: Record<string, unknown>, slug?: string): Frame[] {
+  const kit = slug ? KITS[slug] : undefined;
+  if (format === "carousel" && copy.carousel) return (kit?.carousel ?? carouselClassic)(brand, copy.carousel as CarouselCopy);
+  if (format === "post" && copy.post) return (kit?.post ?? postSingle)(brand, copy.post as PostCopy);
+  if (format === "story" && copy.story) return (kit?.story ?? storyFrames)(brand, copy.story as StoryCopy);
   return [];
 }
 
@@ -21,7 +24,7 @@ export async function renderPost(job: Job) {
   const { data: post } = await sb().from("social_posts").select("*").eq("id", job.post_id).single();
   if (!post) throw new Error("Post não encontrado.");
   const { data: ent } = await sb().from("entities").select("slug").eq("id", job.entity_id).single();
-  const frames = framesFor(post.format, await templateBrand(job.entity_id), (post.copy ?? {}) as Record<string, unknown>);
+  const frames = framesFor(post.format, await templateBrand(job.entity_id), (post.copy ?? {}) as Record<string, unknown>, ent?.slug);
   if (!frames.length) throw new Error("O post não tem texto para desenhar. Peça para a IA refazer.");
   const imgs = await renderFrames(frames);
   const stamp = Date.now().toString(36);
